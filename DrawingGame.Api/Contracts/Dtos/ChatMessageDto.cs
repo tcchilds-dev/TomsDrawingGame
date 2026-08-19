@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace DrawingGame.Api.Game.Contracts;
 
+[JsonConverter(typeof(JsonStringEnumConverter<ChatMessageType>))]
 public enum ChatMessageType
 {
     Chat,

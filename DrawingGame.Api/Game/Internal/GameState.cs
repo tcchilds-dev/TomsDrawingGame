@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace DrawingGame.Api.Game;
 
+[JsonConverter(typeof(JsonStringEnumConverter<GamePhase>))]
 public enum GamePhase
 {
     // Pre-game

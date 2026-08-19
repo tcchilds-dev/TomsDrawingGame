@@ -9,7 +9,7 @@ public static class IdGenerator
     // There will be many more players than rooms, and player Ids won't be shown.
     public static string GenerateId(int length = 9)
     {
-        // Full cryptographic randomness is not necessary for our purposes.
+        // Cryptographic security is not necessary for our purposes.
         return Random.Shared.GetString(_choices, length);
     }
 }

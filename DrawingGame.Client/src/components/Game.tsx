@@ -8,12 +8,13 @@ import PaintSelection from "./PaintSelection";
 import PlayerList from "./PlayerList";
 import Timer from "./Timer";
 import Word from "./Word";
+import type { GameState } from "../game/types";
 
 type GameProps = {
-  setScreen: React.Dispatch<React.SetStateAction<"Home" | "Game">>;
+  state: GameState;
 };
 
-export default function Game({ setScreen }: GameProps) {
+export default function Game({ state }: GameProps) {
   const canvasRef = useRef<CanvasHandle>(null);
   const [selectedColour, setSelectedColour] = useState("#111827");
   const [brushWidth, setBrushWidth] = useState(8);
@@ -22,9 +23,10 @@ export default function Game({ setScreen }: GameProps) {
     <main className="grid h-screen grid-cols-6 grid-rows-24 gap-2 p-2">
       <aside className="col-start-1 row-start-1 text-center">Round: 3</aside>
       <aside className="col-start-1 row-start-2 row-span-19">
-        <PlayerList></PlayerList>
+        <PlayerList players={state.players}></PlayerList>
       </aside>
-      <aside className="col-start-1 row-start-22 row-span-4 content-center text-center">
+      <aside className="col-start-1 row-start-22 row-span-4 flex flex-col justify-center gap-2 text-center">
+        <p aria-label="Room code">{state.roomId}</p>
         <Button type="Leave"></Button>
       </aside>
 

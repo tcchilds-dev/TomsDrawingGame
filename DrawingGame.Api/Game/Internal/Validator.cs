@@ -11,4 +11,19 @@ public static class Validator
         }
         return username;
     }
+
+    public static string ValidateRoomCode(string roomCode)
+    {
+        roomCode = roomCode?.Trim() ?? string.Empty;
+        if (roomCode.Length == 0)
+        {
+            throw new GameException("A room code is required.");
+        }
+        if (roomCode.Length != 9)
+        {
+            throw new GameException("Invalid room code.");
+        }
+
+        return roomCode;
+    }
 }

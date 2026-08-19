@@ -4,6 +4,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<GameManager>();
+builder.Services.AddSingleton<DisconnectCleanup>();
+builder.Services.Configure<RoomConnectionOptions>(
+    builder.Configuration.GetSection("RoomConnection")
+);
 
 builder.Services.AddSingleton<WordList>(_ =>
 {

@@ -4,7 +4,7 @@ export type Player = {
   score: number;
   isOwner: boolean;
   isArtist: boolean;
-  hasCorrectlyGuess: boolean;
+  hasCorrectlyGuessed: boolean;
 };
 
 export type ChatMessageType = "Chat" | "CorrectGuess" | "System";
@@ -14,7 +14,7 @@ export type ChatMessage = {
   username: string | null;
   message: string;
   timeStamp: string;
-  kind: ChatMessageType;
+  messageType: ChatMessageType;
 };
 
 export type GameConfig = {
@@ -38,6 +38,16 @@ export type GameState = {
   phaseEndsAt: string | null;
   players: Player[];
   chatHistory: ChatMessage[];
+};
+
+export type RoomSession = {
+  roomId: string;
+  playerId: string;
+};
+
+export type RoomEntry = {
+  session: RoomSession;
+  state: GameState;
 };
 
 export type Point = {

@@ -1,9 +1,27 @@
 import { useEffect, useRef } from "react";
 
-export default function Input({ placeholder }: { placeholder: string }) {
+type InputProps = {
+  disabled?: boolean;
+  focusOnTyping?: boolean;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  placeholder: string;
+  value?: string;
+};
+
+export default function Input({
+  disabled = false,
+  focusOnTyping = true,
+  onChange,
+  placeholder,
+  value,
+}: InputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!focusOnTyping) {
+      return;
+    }
+
     const focusInputOnTyping = (event: KeyboardEvent) => {
       const target = event.target;
       const isEditableTarget =
@@ -29,14 +47,17 @@ export default function Input({ placeholder }: { placeholder: string }) {
 
     window.addEventListener("keydown", focusInputOnTyping);
     return () => window.removeEventListener("keydown", focusInputOnTyping);
-  }, []);
+  }, [focusOnTyping]);
 
   return (
     <input
       className="input input-neutral focus:outline-none text-center"
+      disabled={disabled}
+      onChange={onChange}
       placeholder={placeholder}
       ref={inputRef}
       type="text"
+      value={value}
     />
   );
 }
