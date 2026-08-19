@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DrawingGame.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dff2056eedd09018cd36d2a58f894e1e1333927e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ec649c439bbbba82738dd908cd512e68d3a51c40")]
 [assembly: System.Reflection.AssemblyProductAttribute("DrawingGame.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DrawingGame.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

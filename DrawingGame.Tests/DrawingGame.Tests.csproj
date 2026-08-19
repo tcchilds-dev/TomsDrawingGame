@@ -22,4 +22,10 @@
     <ProjectReference Include="..\DrawingGame.Api\DrawingGame.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="test-word-list.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function Input() {
+export default function Input({ placeholder }: { placeholder: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -33,8 +33,8 @@ export default function Input() {
 
   return (
     <input
-      className="input input-neutral focus:outline-none"
-      placeholder="Guessage"
+      className="input input-neutral focus:outline-none text-center"
+      placeholder={placeholder}
       ref={inputRef}
       type="text"
     />

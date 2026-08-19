@@ -7,7 +7,8 @@ public class WordListTests
     [Fact]
     public void GetChoices_ReturnsDistinctNonEmptyWords()
     {
-        var wordList = new WordList("test-word-list.txt");
+        var path = Path.Combine(AppContext.BaseDirectory, "test-word-list.txt");
+        var wordList = new WordList(path);
 
         var result = wordList.GetChoices(5);
 

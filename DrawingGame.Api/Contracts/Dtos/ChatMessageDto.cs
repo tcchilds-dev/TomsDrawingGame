@@ -8,7 +8,6 @@ public enum ChatMessageType
 }
 
 public sealed record ChatMessageDto(
-    string Id,
     string? PlayerId,
     string? Username,
     string Message,

@@ -9,7 +9,11 @@ import PlayerList from "./PlayerList";
 import Timer from "./Timer";
 import Word from "./Word";
 
-export default function Game() {
+type GameProps = {
+  setScreen: React.Dispatch<React.SetStateAction<"Home" | "Game">>;
+};
+
+export default function Game({ setScreen }: GameProps) {
   const canvasRef = useRef<CanvasHandle>(null);
   const [selectedColour, setSelectedColour] = useState("#111827");
   const [brushWidth, setBrushWidth] = useState(8);
@@ -21,7 +25,7 @@ export default function Game() {
         <PlayerList></PlayerList>
       </aside>
       <aside className="col-start-1 row-start-22 row-span-4 content-center text-center">
-        <Button></Button>
+        <Button type="Leave"></Button>
       </aside>
 
       <header className="col-start-2 col-span-4 row-start-1 content-center text-center">
@@ -50,7 +54,7 @@ export default function Game() {
         <Chat></Chat>
       </aside>
       <aside className="col-start-6 row-start-23 row-span-4">
-        <Input />
+        <Input placeholder="" />
       </aside>
     </main>
   );
