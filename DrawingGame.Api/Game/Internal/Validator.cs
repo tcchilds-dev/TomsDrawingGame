@@ -19,7 +19,7 @@ public static class Validator
         {
             throw new GameException("A room code is required.");
         }
-        if (roomCode.Length != 9)
+        if (roomCode.Length != 7)
         {
             throw new GameException("Invalid room code.");
         }

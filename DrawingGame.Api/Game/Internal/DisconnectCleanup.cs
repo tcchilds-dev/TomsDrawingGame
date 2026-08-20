@@ -53,10 +53,10 @@ public sealed class DisconnectCleanup
         }
         catch (OperationCanceledException)
             when (_applicationLifetime.ApplicationStopping.IsCancellationRequested) { }
-        catch (Exception exception)
+        catch (Exception e)
         {
             _logger.LogError(
-                exception,
+                e,
                 "Failed to remove disconnected SignalR connection {ConnectionId}.",
                 connectionId
             );

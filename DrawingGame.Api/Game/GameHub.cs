@@ -64,6 +64,23 @@ public class GameHub : Hub<IGameClient>
         return entry;
     }
 
+    public async Task LeaveRoom()
+    {
+        var update = _gameManager.RemoveDisconnectedPlayer(Context.ConnectionId);
+
+        if (update is null)
+        {
+            throw new HubException("This connection is not in a room.");
+        }
+
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, update.RoomId);
+
+        if (update?.State is not null)
+        {
+            await Clients.Group(update.RoomId).SyncGameState(update.State);
+        }
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         _disconnectCleanup.ScheduleRemoval(Context.ConnectionId);

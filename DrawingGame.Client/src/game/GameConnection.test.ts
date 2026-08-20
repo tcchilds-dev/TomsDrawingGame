@@ -130,4 +130,36 @@ describe("GameConnection", () => {
     );
     expect(sessionStorage).toHaveLength(0);
   });
+
+  it("leaves the room and clears the saved session after the hub confirms", async () => {
+    const hub = new FakeHubConnection();
+    hub.nextResult = roomEntry;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    await connection.createRoom("Alice");
+
+    await connection.leaveRoom();
+
+    expect(hub.invoke).toHaveBeenLastCalledWith("LeaveRoom");
+    expect(sessionStorage).toHaveLength(0);
+  });
+
+  it("keeps the saved session when leaving fails", async () => {
+    const hub = new FakeHubConnection();
+    hub.nextResult = roomEntry;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    await connection.createRoom("Alice");
+    hub.invoke.mockRejectedValueOnce(new Error("Unable to leave room."));
+
+    await expect(connection.leaveRoom()).rejects.toThrow("Unable to leave room.");
+
+    expect(sessionStorage.getItem("drawing-game-room-session")).toBe(
+      JSON.stringify(roomEntry.session),
+    );
+  });
 });

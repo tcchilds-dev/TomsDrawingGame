@@ -57,8 +57,29 @@ function App() {
     }
   };
 
+  const leaveRoom = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await gameConnection.leaveRoom();
+      setGameState(null);
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (gameState) {
-    return <Game state={gameState} />;
+    return (
+      <Game
+        error={error}
+        isLeaving={isSubmitting}
+        onLeaveRoom={leaveRoom}
+        state={gameState}
+      />
+    );
   }
 
   return (
