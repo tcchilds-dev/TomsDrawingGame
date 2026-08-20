@@ -162,4 +162,17 @@ describe("GameConnection", () => {
       JSON.stringify(roomEntry.session),
     );
   });
+
+  it("starts the game without sending client-owned room state", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await connection.startGame();
+
+    expect(hub.invoke).toHaveBeenCalledWith("StartGame");
+  });
 });

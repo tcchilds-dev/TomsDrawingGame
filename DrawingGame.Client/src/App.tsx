@@ -7,6 +7,7 @@ import type { GameState, RoomEntry } from "./game/types";
 function App() {
   const [gameConnection] = useState(() => new GameConnection());
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const initialRoomPromise = useRef<Promise<RoomEntry | null> | null>(null);
@@ -16,6 +17,7 @@ function App() {
     const stopListeningForState = gameConnection.onGameStateChanged(setGameState);
     const stopListeningForExpiry = gameConnection.onSessionExpired((reason) => {
       setGameState(null);
+      setPlayerId(null);
       setError(getErrorMessage(reason));
     });
 
@@ -28,6 +30,7 @@ function App() {
       .then((entry) => {
         if (isActive && entry) {
           setGameState(entry.state);
+          setPlayerId(entry.session.playerId);
         }
       })
       .catch((reason: unknown) => {
@@ -43,6 +46,15 @@ function App() {
     };
   }, [gameConnection]);
 
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [error]);
+
   const enterRoom = async (request: () => Promise<RoomEntry>) => {
     setError(null);
     setIsSubmitting(true);
@@ -50,6 +62,7 @@ function App() {
     try {
       const entry = await request();
       setGameState(entry.state);
+      setPlayerId(entry.session.playerId);
     } catch (reason) {
       setError(getErrorMessage(reason));
     } finally {
@@ -64,6 +77,20 @@ function App() {
     try {
       await gameConnection.leaveRoom();
       setGameState(null);
+      setPlayerId(null);
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const startGame = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await gameConnection.startGame();
     } catch (reason) {
       setError(getErrorMessage(reason));
     } finally {
@@ -74,9 +101,11 @@ function App() {
   if (gameState) {
     return (
       <Game
+        currentPlayerId={playerId}
         error={error}
-        isLeaving={isSubmitting}
+        isSubmitting={isSubmitting}
         onLeaveRoom={leaveRoom}
+        onStartGame={startGame}
         state={gameState}
       />
     );

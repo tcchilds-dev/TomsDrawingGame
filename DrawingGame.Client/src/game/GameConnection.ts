@@ -78,6 +78,11 @@ export class GameConnection {
     this.roomSessionStore.clear();
   }
 
+  async startGame(): Promise<void> {
+    await this.start();
+    await this.connection.invoke("StartGame");
+  }
+
   async rejoinRoom(): Promise<RoomEntry | null> {
     const session = this.roomSessionStore.load();
     if (!session) {

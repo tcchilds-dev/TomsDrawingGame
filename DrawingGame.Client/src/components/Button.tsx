@@ -1,7 +1,7 @@
 type ButtonProps = {
   disabled?: boolean;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
-  type: "Leave" | "CreateRoom" | "JoinRoom";
+  type: "Leave" | "CreateRoom" | "JoinRoom" | "Start";
 };
 
 export default function Button({ disabled = false, onClick, type }: ButtonProps) {
@@ -28,6 +28,18 @@ export default function Button({ disabled = false, onClick, type }: ButtonProps)
     return (
       <button className="btn btn-secondary" disabled={disabled} onClick={onClick} type="button">
         Join Room
+      </button>
+    );
+  }
+  if (type == "Start") {
+    return (
+      <button
+        className="btn btn-primary w-full"
+        disabled={disabled}
+        onClick={onClick}
+        type="button"
+      >
+        Start Game
       </button>
     );
   }

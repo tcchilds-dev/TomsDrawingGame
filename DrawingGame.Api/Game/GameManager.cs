@@ -124,6 +124,36 @@ public class GameManager
         return CreateEntry(room, player);
     }
 
+    public GameStateDto StartGame(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (room.OwnerId != player.Id)
+        {
+            throw new GameException("Only the owner may start the game.");
+        }
+
+        if (room.State.Phase != GamePhase.Lobby)
+        {
+            throw new GameException("The game can only be started from the lobby.");
+        }
+
+        if (room.Players.Count < 2)
+        {
+            throw new GameException("At least two players are required to start the game.");
+        }
+
+        var playerIds = room.Players.Keys;
+
+        room.State.CurrentRound = 1;
+        room.State.ArtistQueue.Clear();
+        room.State.ArtistQueue.AddRange(playerIds);
+        room.State.CurrentArtistIndex = 0;
+        room.State.Phase = GamePhase.WordChoice;
+
+        return CreateState(room);
+    }
+
     public RoomUpdate? RemoveDisconnectedPlayer(string connectionId)
     {
         if (
@@ -161,6 +191,30 @@ public class GameManager
         }
 
         return new RoomUpdate(room.Id, CreateState(room));
+    }
+
+    private (GameRoom Room, Player Player) GetRoomMembership(string connectionId)
+    {
+        if (!_members.TryGetValue(connectionId, out var member))
+        {
+            throw new GameException("This connection is not in a room.");
+        }
+
+        if (!_rooms.TryGetValue(member.RoomId, out var room))
+        {
+            throw new InvalidOperationException(
+                "A room membership references a room that does not exist."
+            );
+        }
+
+        if (!room.Players.TryGetValue(member.PlayerId, out var player))
+        {
+            throw new InvalidOperationException(
+                "A room membership references a player that does not exist."
+            );
+        }
+
+        return (room, player);
     }
 
     private void EnsureConnectionIsAvailable(string connectionId)

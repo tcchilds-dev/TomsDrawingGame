@@ -40,9 +40,11 @@ describe("Game", () => {
 
     render(
       <Game
+        currentPlayerId="player-1"
         error={null}
-        isLeaving={false}
+        isSubmitting={false}
         onLeaveRoom={leaveRoom}
+        onStartGame={vi.fn()}
         state={gameState}
       />,
     );
@@ -50,19 +52,84 @@ describe("Game", () => {
     await user.click(screen.getByRole("button", { name: "Leave" }));
 
     expect(leaveRoom).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText("Room code")).toHaveTextContent(
+      "Room Code: aBc12De",
+    );
   });
 
   it("disables leaving and displays an error when requested", () => {
     render(
       <Game
+        currentPlayerId="player-1"
         error="Unable to leave room."
-        isLeaving
+        isSubmitting
         onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
         state={gameState}
       />,
     );
 
     expect(screen.getByRole("button", { name: "Leave" })).toBeDisabled();
+    const noticeBoard = screen.getByLabelText("Room notices");
     expect(screen.getByRole("alert")).toHaveTextContent("Unable to leave room.");
+    expect(noticeBoard).toContainElement(screen.getByRole("alert"));
+  });
+
+  it("lets the owner start a lobby game", async () => {
+    const user = userEvent.setup();
+    const startGame = vi.fn(async () => undefined);
+
+    render(
+      <Game
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onLeaveRoom={vi.fn()}
+        onStartGame={startGame}
+        state={gameState}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start Game" }));
+
+    expect(startGame).toHaveBeenCalledOnce();
+  });
+
+  it("asks non-owners to wait instead of showing the start action", () => {
+    render(
+      <Game
+        currentPlayerId="player-2"
+        error={null}
+        isSubmitting={false}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={gameState}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Start Game" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Room notices")).toContainElement(
+      screen.getByText("Waiting for the owner to start"),
+    );
+  });
+
+  it("uses the synchronized round and hides lobby controls after starting", () => {
+    render(
+      <Game
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={{ ...gameState, currentRound: 1, phase: "WordChoice" }}
+      />,
+    );
+
+    expect(screen.getByText("Round: 1")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Start Game" }),
+    ).not.toBeInTheDocument();
   });
 });

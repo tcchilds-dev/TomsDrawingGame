@@ -81,6 +81,21 @@ public class GameHub : Hub<IGameClient>
         }
     }
 
+    public async Task StartGame()
+    {
+        GameStateDto state;
+        try
+        {
+            state = _gameManager.StartGame(Context.ConnectionId);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+
+        await Clients.Group(state.RoomId).SyncGameState(state);
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         _disconnectCleanup.ScheduleRemoval(Context.ConnectionId);
