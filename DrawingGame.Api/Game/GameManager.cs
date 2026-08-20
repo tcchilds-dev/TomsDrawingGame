@@ -13,6 +13,34 @@ public class GameManager
 {
     private sealed record RoomMember(string RoomId, string PlayerId);
 
+    private readonly string[] _allowedColours =
+    [
+        "#111827",
+        "#ffffff",
+        "#ef4444",
+        "#f97316",
+        "#eab308",
+        "#22c55e",
+        "#06b6d4",
+        "#3b82f6",
+        "#8b5cf6",
+        "#ec4899",
+        "#a16207",
+        "#6b7280",
+        "#fca5a5",
+        "#fdba74",
+        "#bef264",
+        "#67e8f9",
+        "#93c5fd",
+        "#c4b5fd",
+        "#f9a8d4",
+        "#78350f",
+        "#94a3b8",
+        "#fecaca",
+        "#fed7aa",
+        "#d9f99d",
+    ];
+
     // <room.Id, room>
     private readonly ConcurrentDictionary<string, GameRoom> _rooms = new(StringComparer.Ordinal);
 
@@ -245,6 +273,131 @@ public class GameManager
             ?? throw new InvalidOperationException("No current word is set.");
     }
 
+    public CanvasStateDto GetCanvasState(string connectionId)
+    {
+        var (room, _) = GetRoomMembership(connectionId);
+
+        return CreateCanvasState(room);
+    }
+
+    public sealed record StrokeStartResult(
+        string RoomId,
+        Stroke Stroke,
+        bool PreviousStrokeCompleted
+    );
+
+    public StrokeStartResult? BeginStroke(
+        string colour,
+        int width,
+        Point firstPoint,
+        string connectionId
+    )
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (
+            player.Id != GetCurrentArtistId(room)
+            || room.State.Phase != GamePhase.Playing
+            || width is < 1 or > 20
+            || !_allowedColours.Contains<string>(colour)
+            || !IsValidPoint(firstPoint)
+        )
+        {
+            return null;
+        }
+
+        var previousStrokeCompleted = false;
+
+        if (room.State.ActiveStroke is { } previousStroke)
+        {
+            room.State.CompletedStrokes.Add(previousStroke);
+            room.State.ActiveStroke = null;
+            previousStrokeCompleted = true;
+        }
+
+        var stroke = new Stroke { Colour = colour, Width = width };
+        stroke.Points.Add(firstPoint);
+        room.State.ActiveStroke = stroke;
+
+        return new StrokeStartResult(room.Id, CloneStroke(stroke), previousStrokeCompleted);
+    }
+
+    public string? AddStrokePoints(Point[] points, string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (
+            player.Id != GetCurrentArtistId(room)
+            || room.State.Phase != GamePhase.Playing
+            || room.State.ActiveStroke is null
+            || points.Length == 0
+            || points.Length > 1000
+        )
+        {
+            return null;
+        }
+
+        foreach (var point in points)
+        {
+            if (!IsValidPoint(point))
+            {
+                return null;
+            }
+        }
+
+        room.State.ActiveStroke.Points.AddRange(points);
+        return room.Id;
+    }
+
+    public string? EndStroke(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (
+            player.Id != GetCurrentArtistId(room)
+            || room.State.Phase != GamePhase.Playing
+            || room.State.ActiveStroke is null
+        )
+        {
+            return null;
+        }
+
+        room.State.CompletedStrokes.Add(room.State.ActiveStroke);
+        room.State.ActiveStroke = null;
+        return room.Id;
+    }
+
+    public (string?, CanvasStateDto?) UndoStroke(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (
+            player.Id != GetCurrentArtistId(room)
+            || room.State.Phase != GamePhase.Playing
+            || room.State.CompletedStrokes.Count < 1
+        )
+        {
+            return (null, null);
+        }
+
+        room.State.CompletedStrokes.RemoveAt(room.State.CompletedStrokes.Count - 1);
+        return (room.Id, CreateCanvasState(room));
+    }
+
+    public (string?, CanvasStateDto?) ClearCanvas(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (player.Id != GetCurrentArtistId(room) || room.State.Phase != GamePhase.Playing)
+        {
+            return (null, null);
+        }
+
+        room.State.ActiveStroke = null;
+        room.State.CompletedStrokes.Clear();
+        return (room.Id, CreateCanvasState(room));
+    }
+
     public RoomUpdate? RemoveDisconnectedPlayer(string connectionId)
     {
         if (
@@ -318,6 +471,39 @@ public class GameManager
         }
 
         return (room, player);
+    }
+
+    private static bool IsValidPoint(Point point)
+    {
+        if (
+            double.IsFinite(point.X)
+            && double.IsFinite(point.Y)
+            && point.X is not < 0 and not > 1
+            && point.Y is not < 0 and not > 1
+        )
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private static Stroke CloneStroke(Stroke original)
+    {
+        var clone = new Stroke { Colour = original.Colour, Width = original.Width };
+
+        clone.Points.AddRange(original.Points);
+        return clone;
+    }
+
+    private static CanvasStateDto CreateCanvasState(GameRoom room)
+    {
+        return new CanvasStateDto(
+            room.State.CompletedStrokes.Select(CloneStroke).ToArray(),
+            room.State.ActiveStroke is null ? null : CloneStroke(room.State.ActiveStroke)
+        );
     }
 
     private void EnsureConnectionIsAvailable(string connectionId)

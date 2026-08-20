@@ -1,43 +1,54 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Button from "./Button";
 import Canvas from "./Canvas";
-import type { CanvasHandle } from "./Canvas";
 import Chat from "./Chat";
 import Input from "./Input";
 import PaintSelection from "./PaintSelection";
 import PlayerList from "./PlayerList";
 import Timer from "./Timer";
 import Word from "./Word";
-import type { GameState } from "../game/types";
+import type { CanvasState, GameState, Point } from "../game/types";
 
 type GameProps = {
   artistWord: string | null;
+  canvasState: CanvasState;
   currentPlayerId: string | null;
   error: string | null;
   isSubmitting: boolean;
+  onAddStrokePoints: (points: Point[]) => void;
+  onBeginStroke: (colour: string, width: number, firstPoint: Point) => void;
+  onClearCanvas: () => void;
   onChooseWord: (word: string) => Promise<void> | void;
+  onEndStroke: () => void;
   onLeaveRoom: () => Promise<void> | void;
   onStartGame: () => Promise<void> | void;
+  onUndoStroke: () => void;
   state: GameState;
   wordChoices: string[];
 };
 
 export default function Game({
   artistWord,
+  canvasState,
   currentPlayerId,
   error,
   isSubmitting,
+  onAddStrokePoints,
+  onBeginStroke,
+  onClearCanvas,
   onChooseWord,
+  onEndStroke,
   onLeaveRoom,
   onStartGame,
+  onUndoStroke,
   state,
   wordChoices,
 }: GameProps) {
-  const canvasRef = useRef<CanvasHandle>(null);
   const [selectedColour, setSelectedColour] = useState("#111827");
   const [brushWidth, setBrushWidth] = useState(8);
   const isOwner = currentPlayerId === state.ownerId;
   const isArtist = currentPlayerId === state.currentArtistId;
+  const isDrawingEnabled = isArtist && state.phase === "Playing";
   const artistName = state.players.find(
     (player) => player.id === state.currentArtistId,
   )?.username;
@@ -93,16 +104,25 @@ export default function Game({
       </header>
 
       <section className="col-start-2 col-span-4 row-start-2 row-span-20">
-        <Canvas brushWidth={brushWidth} colour={selectedColour} ref={canvasRef} />
+        <Canvas
+          brushWidth={brushWidth}
+          canvasState={canvasState}
+          colour={selectedColour}
+          isDrawingEnabled={isDrawingEnabled}
+          onAddStrokePoints={onAddStrokePoints}
+          onBeginStroke={onBeginStroke}
+          onEndStroke={onEndStroke}
+        />
       </section>
 
       <section className="col-start-2 col-span-4 row-start-22 row-span-4">
         <PaintSelection
           brushWidth={brushWidth}
+          disabled={!isDrawingEnabled}
           onBrushWidthChange={setBrushWidth}
-          onClear={() => canvasRef.current?.clear()}
+          onClear={onClearCanvas}
           onColourChange={setSelectedColour}
-          onUndo={() => canvasRef.current?.undo()}
+          onUndo={onUndoStroke}
           selectedColour={selectedColour}
         />
       </section>

@@ -4,16 +4,26 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import { RoomSessionStore } from "./RoomSessionStore";
-import type { GameState, RoomEntry } from "./types";
+import type {
+  CanvasState,
+  CanvasUpdate,
+  GameState,
+  Point,
+  RoomEntry,
+  Stroke,
+} from "./types";
 
 type GameStateListener = (state: GameState) => void;
+type CanvasUpdateListener = (update: CanvasUpdate) => void;
 type SessionExpiredListener = (error: unknown) => void;
+type HubEventHandler = (...args: unknown[]) => void;
 
 type GameHubConnection = {
   readonly state: HubConnectionState;
   start: () => Promise<void>;
   invoke: (methodName: string, ...args: unknown[]) => Promise<unknown>;
-  on: (methodName: string, handler: (state: GameState) => void) => void;
+  send: (methodName: string, ...args: unknown[]) => Promise<void>;
+  on: (methodName: string, handler: HubEventHandler) => void;
   onreconnected: (handler: () => Promise<void> | void) => void;
 };
 
@@ -24,6 +34,7 @@ type GameConnectionOptions = {
 
 export class GameConnection {
   private readonly connection: GameHubConnection;
+  private readonly canvasUpdateListeners = new Set<CanvasUpdateListener>();
   private readonly gameStateListeners = new Set<GameStateListener>();
   private readonly roomSessionStore: RoomSessionStore;
   private readonly sessionExpiredListeners = new Set<SessionExpiredListener>();
@@ -36,13 +47,38 @@ export class GameConnection {
     );
 
     this.connection.on("SyncGameState", (state) => {
-      this.publishGameState(state);
+      this.publishGameState(state as GameState);
+    });
+    this.connection.on("SyncCanvas", (state) => {
+      this.publishCanvasUpdate({
+        type: "synced",
+        state: state as CanvasState,
+      });
+    });
+    this.connection.on("StrokeStarted", (stroke) => {
+      this.publishCanvasUpdate({
+        type: "strokeStarted",
+        stroke: stroke as Stroke,
+      });
+    });
+    this.connection.on("StrokePointsAdded", (points) => {
+      this.publishCanvasUpdate({
+        type: "strokePointsAdded",
+        points: points as Point[],
+      });
+    });
+    this.connection.on("StrokeEnded", () => {
+      this.publishCanvasUpdate({ type: "strokeEnded" });
     });
     this.connection.onreconnected(async () => {
       try {
         const entry = await this.rejoinRoom();
         if (entry) {
           this.publishGameState(entry.state);
+          this.publishCanvasUpdate({
+            type: "synced",
+            state: await this.getCanvasState(),
+          });
         }
       } catch (error) {
         this.publishSessionExpired(error);
@@ -98,6 +134,36 @@ export class GameConnection {
     return (await this.connection.invoke("GetCurrentWord")) as string;
   }
 
+  async getCanvasState(): Promise<CanvasState> {
+    await this.start();
+    return (await this.connection.invoke("GetCanvasState")) as CanvasState;
+  }
+
+  async beginStroke(colour: string, width: number, firstPoint: Point) {
+    await this.start();
+    await this.connection.send("BeginStroke", colour, width, firstPoint);
+  }
+
+  async addStrokePoints(points: Point[]) {
+    await this.start();
+    await this.connection.send("AddStrokePoints", points);
+  }
+
+  async endStroke() {
+    await this.start();
+    await this.connection.send("EndStroke");
+  }
+
+  async undoStroke() {
+    await this.start();
+    await this.connection.send("UndoStroke");
+  }
+
+  async clearCanvas() {
+    await this.start();
+    await this.connection.send("ClearCanvas");
+  }
+
   async rejoinRoom(): Promise<RoomEntry | null> {
     const session = this.roomSessionStore.load();
     if (!session) {
@@ -119,6 +185,11 @@ export class GameConnection {
     return () => this.gameStateListeners.delete(listener);
   }
 
+  onCanvasUpdated(listener: CanvasUpdateListener) {
+    this.canvasUpdateListeners.add(listener);
+    return () => this.canvasUpdateListeners.delete(listener);
+  }
+
   onSessionExpired(listener: SessionExpiredListener) {
     this.sessionExpiredListeners.add(listener);
     return () => this.sessionExpiredListeners.delete(listener);
@@ -134,6 +205,12 @@ export class GameConnection {
   private publishGameState(state: GameState) {
     for (const listener of this.gameStateListeners) {
       listener(state);
+    }
+  }
+
+  private publishCanvasUpdate(update: CanvasUpdate) {
+    for (const listener of this.canvasUpdateListeners) {
+      listener(update);
     }
   }
 

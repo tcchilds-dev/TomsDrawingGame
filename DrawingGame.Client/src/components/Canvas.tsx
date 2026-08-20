@@ -1,31 +1,15 @@
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-type Stroke = {
-  colour: string;
-  points: Point[];
-  width: number;
-};
+import type { CanvasState, Point, Stroke } from "../game/types";
 
 type CanvasProps = {
   brushWidth: number;
+  canvasState: CanvasState;
   colour: string;
-};
-
-export type CanvasHandle = {
-  clear: () => void;
-  undo: () => void;
+  isDrawingEnabled: boolean;
+  onAddStrokePoints: (points: Point[]) => void;
+  onBeginStroke: (colour: string, width: number, firstPoint: Point) => void;
+  onEndStroke: () => void;
 };
 
 type CanvasSize = {
@@ -72,12 +56,17 @@ function drawStroke(
   context.stroke();
 }
 
-const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
-  { brushWidth, colour },
-  ref,
-) {
+export default function Canvas({
+  brushWidth,
+  canvasState,
+  colour,
+  isDrawingEnabled,
+  onAddStrokePoints,
+  onBeginStroke,
+  onEndStroke,
+}: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const strokesRef = useRef<Stroke[]>([]);
+  const completedStrokesRef = useRef<Stroke[]>([]);
   const activeStrokeRef = useRef<Stroke | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const canvasSizeRef = useRef<CanvasSize>(EMPTY_CANVAS_SIZE);
@@ -101,7 +90,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.clearRect(0, 0, width, height);
 
-    for (const stroke of strokesRef.current) {
+    for (const stroke of completedStrokesRef.current) {
       drawStroke(context, stroke, canvasSizeRef.current);
     }
 
@@ -157,25 +146,22 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
     };
   }, [resizeCanvas]);
 
-  const clear = useCallback(() => {
+  useEffect(() => {
     activePointerIdRef.current = null;
-    activeStrokeRef.current = null;
-    strokesRef.current = [];
+    completedStrokesRef.current = canvasState.completedStrokes;
+    activeStrokeRef.current = canvasState.activeStroke;
     redrawCanvas();
-  }, [redrawCanvas]);
+  }, [canvasState, redrawCanvas]);
 
-  const undo = useCallback(() => {
-    if (activeStrokeRef.current) {
-      activePointerIdRef.current = null;
-      activeStrokeRef.current = null;
-    } else {
-      strokesRef.current.pop();
+  useEffect(() => {
+    if (isDrawingEnabled || activePointerIdRef.current === null) {
+      return;
     }
 
+    activePointerIdRef.current = null;
+    activeStrokeRef.current = canvasState.activeStroke;
     redrawCanvas();
-  }, [redrawCanvas]);
-
-  useImperativeHandle(ref, () => ({ clear, undo }), [clear, undo]);
+  }, [canvasState.activeStroke, isDrawingEnabled, redrawCanvas]);
 
   const getPoint = useCallback((clientX: number, clientY: number): Point => {
     const canvas = canvasRef.current;
@@ -199,17 +185,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
       const activeStroke = activeStrokeRef.current;
 
       if (!activeStroke) {
-        return;
+        return null;
       }
 
       const point = getPoint(clientX, clientY);
       const previousPoint = activeStroke.points.at(-1);
 
       if (previousPoint?.x === point.x && previousPoint.y === point.y) {
-        return;
+        return null;
       }
 
       activeStroke.points.push(point);
+      return point;
     },
     [getPoint],
   );
@@ -221,22 +208,34 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
       }
 
       if (includeFinalPoint) {
-        appendPoint(event.clientX, event.clientY);
+        const finalPoint = appendPoint(event.clientX, event.clientY);
+        if (finalPoint) {
+          onAddStrokePoints([finalPoint]);
+        }
       }
 
-      if (activeStrokeRef.current) {
-        strokesRef.current.push(activeStrokeRef.current);
+      const activeStroke = activeStrokeRef.current;
+      if (activeStroke) {
+        completedStrokesRef.current = [
+          ...completedStrokesRef.current,
+          activeStroke,
+        ];
       }
 
       activePointerIdRef.current = null;
       activeStrokeRef.current = null;
       redrawCanvas();
+
+      if (activeStroke) {
+        onEndStroke();
+      }
     },
-    [appendPoint, redrawCanvas],
+    [appendPoint, onAddStrokePoints, onEndStroke, redrawCanvas],
   );
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (
+      !isDrawingEnabled ||
       activePointerIdRef.current !== null ||
       (event.pointerType === "mouse" && event.button !== 0)
     ) {
@@ -245,35 +244,56 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
 
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+
+    const firstPoint = getPoint(event.clientX, event.clientY);
     activePointerIdRef.current = event.pointerId;
     activeStrokeRef.current = {
       colour,
-      points: [getPoint(event.clientX, event.clientY)],
+      points: [firstPoint],
       width: brushWidth,
     };
+
+    onBeginStroke(colour, brushWidth, firstPoint);
     redrawCanvas();
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (activePointerIdRef.current !== event.pointerId) {
+    if (
+      !isDrawingEnabled ||
+      activePointerIdRef.current !== event.pointerId
+    ) {
       return;
     }
 
     event.preventDefault();
 
-    const pointerEvents = event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
+    const coalescedEvents = event.nativeEvent.getCoalescedEvents?.();
+    const pointerEvents =
+      coalescedEvents && coalescedEvents.length > 0
+        ? coalescedEvents
+        : [event.nativeEvent];
+    const points: Point[] = [];
 
     for (const pointerEvent of pointerEvents) {
-      appendPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const point = appendPoint(pointerEvent.clientX, pointerEvent.clientY);
+      if (point) {
+        points.push(point);
+      }
     }
 
-    redrawCanvas();
+    if (points.length > 0) {
+      onAddStrokePoints(points);
+      redrawCanvas();
+    }
   };
 
   return (
     <canvas
+      aria-disabled={!isDrawingEnabled}
       aria-label="Drawing canvas"
-      className="h-full w-full cursor-crosshair touch-none bg-base-100"
+      className={`h-full w-full touch-none bg-base-100 ${
+        isDrawingEnabled ? "cursor-crosshair" : "cursor-default"
+      }`}
       onLostPointerCapture={(event) => finishStroke(event, false)}
       onPointerCancel={(event) => finishStroke(event, false)}
       onPointerDown={handlePointerDown}
@@ -284,6 +304,4 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(
       Your browser does not support the drawing canvas.
     </canvas>
   );
-});
-
-export default Canvas;
+}

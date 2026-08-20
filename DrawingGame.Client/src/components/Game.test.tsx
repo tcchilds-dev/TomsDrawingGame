@@ -4,15 +4,31 @@ import { describe, expect, it, vi } from "vitest";
 import type { GameState } from "../game/types";
 import Game from "./Game";
 
-vi.mock("./Canvas", async () => {
-  const { forwardRef } = await import("react");
-
+vi.mock("./Canvas", () => {
   return {
-    default: forwardRef(function Canvas() {
-      return <canvas aria-label="Drawing canvas" />;
-    }),
+    default: function Canvas({
+      isDrawingEnabled,
+    }: {
+      isDrawingEnabled: boolean;
+    }) {
+      return (
+        <canvas
+          aria-disabled={!isDrawingEnabled}
+          aria-label="Drawing canvas"
+        />
+      );
+    },
   };
 });
+
+const drawingProps = {
+  canvasState: { completedStrokes: [], activeStroke: null },
+  onAddStrokePoints: vi.fn(),
+  onBeginStroke: vi.fn(),
+  onClearCanvas: vi.fn(),
+  onEndStroke: vi.fn(),
+  onUndoStroke: vi.fn(),
+};
 
 const gameState: GameState = {
   roomId: "aBc12De",
@@ -40,6 +56,7 @@ describe("Game", () => {
 
     render(
       <Game
+        {...drawingProps}
         artistWord={null}
         currentPlayerId="player-1"
         error={null}
@@ -63,6 +80,7 @@ describe("Game", () => {
   it("disables leaving and displays an error when requested", () => {
     render(
       <Game
+        {...drawingProps}
         artistWord={null}
         currentPlayerId="player-1"
         error="Unable to leave room."
@@ -87,6 +105,7 @@ describe("Game", () => {
 
     render(
       <Game
+        {...drawingProps}
         artistWord={null}
         currentPlayerId="player-1"
         error={null}
@@ -107,6 +126,7 @@ describe("Game", () => {
   it("asks non-owners to wait instead of showing the start action", () => {
     render(
       <Game
+        {...drawingProps}
         artistWord={null}
         currentPlayerId="player-2"
         error={null}
@@ -130,6 +150,7 @@ describe("Game", () => {
   it("uses the synchronized round and hides lobby controls after starting", () => {
     render(
       <Game
+        {...drawingProps}
         artistWord={null}
         currentPlayerId="player-1"
         error={null}
@@ -146,5 +167,57 @@ describe("Game", () => {
     expect(
       screen.queryByRole("button", { name: "Start Game" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("only enables drawing controls for the artist during play", () => {
+    const playingState: GameState = {
+      ...gameState,
+      phase: "Playing",
+      currentArtistId: "player-1",
+    };
+
+    const { rerender } = render(
+      <Game
+        {...drawingProps}
+        artistWord="Castle"
+        currentPlayerId="player-2"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={playingState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Drawing canvas")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
+
+    rerender(
+      <Game
+        {...drawingProps}
+        artistWord="Castle"
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={playingState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Drawing canvas")).toHaveAttribute(
+      "aria-disabled",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
   });
 });

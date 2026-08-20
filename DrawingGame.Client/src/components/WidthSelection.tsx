@@ -5,11 +5,16 @@ const brushWidths = [
 ];
 
 type WidthSelectionProps = {
+  disabled?: boolean;
   onChange: (width: number) => void;
   value: number;
 };
 
-export default function WidthSelection({ onChange, value }: WidthSelectionProps) {
+export default function WidthSelection({
+  disabled = false,
+  onChange,
+  value,
+}: WidthSelectionProps) {
   return (
     <ul
       aria-label="Brush width"
@@ -23,6 +28,7 @@ export default function WidthSelection({ onChange, value }: WidthSelectionProps)
             <button
               aria-pressed={isSelected}
               className={isSelected ? "menu-active" : undefined}
+              disabled={disabled}
               onClick={() => onChange(width)}
               type="button"
             >

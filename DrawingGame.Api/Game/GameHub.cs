@@ -64,6 +64,76 @@ public class GameHub : Hub<IGameClient>
         return entry;
     }
 
+    public CanvasStateDto GetCanvasState()
+    {
+        return _gameManager.GetCanvasState(Context.ConnectionId);
+    }
+
+    public async Task BeginStroke(string colour, int width, Point firstPoint)
+    {
+        var result = _gameManager.BeginStroke(colour, width, firstPoint, Context.ConnectionId);
+
+        if (result is null)
+        {
+            return;
+        }
+
+        if (result.PreviousStrokeCompleted)
+        {
+            await Clients.OthersInGroup(result.RoomId).StrokeEnded();
+        }
+
+        await Clients.OthersInGroup(result.RoomId).StrokeStarted(result.Stroke);
+    }
+
+    public async Task AddStrokePoints(Point[] points)
+    {
+        var roomId = _gameManager.AddStrokePoints(points, Context.ConnectionId);
+
+        if (roomId is null)
+        {
+            return;
+        }
+
+        await Clients.OthersInGroup(roomId).StrokePointsAdded(points);
+    }
+
+    public async Task EndStroke()
+    {
+        var roomId = _gameManager.EndStroke(Context.ConnectionId);
+
+        if (roomId is null)
+        {
+            return;
+        }
+
+        await Clients.OthersInGroup(roomId).StrokeEnded();
+    }
+
+    public async Task UndoStroke()
+    {
+        var (roomId, state) = _gameManager.UndoStroke(Context.ConnectionId);
+
+        if (roomId is null || state is null)
+        {
+            return;
+        }
+
+        await Clients.Group(roomId).SyncCanvas(state);
+    }
+
+    public async Task ClearCanvas()
+    {
+        var (roomId, state) = _gameManager.ClearCanvas(Context.ConnectionId);
+
+        if (roomId is null || state is null)
+        {
+            return;
+        }
+
+        await Clients.Group(roomId).SyncCanvas(state);
+    }
+
     public async Task LeaveRoom()
     {
         var update = _gameManager.RemoveDisconnectedPlayer(Context.ConnectionId);

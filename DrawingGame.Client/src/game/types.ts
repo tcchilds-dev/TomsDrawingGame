@@ -59,9 +59,15 @@ export type Stroke = {
   colour: string;
   width: number;
   points: Point[];
-  isComplete: boolean;
 };
 
 export type CanvasState = {
-  strokes: Stroke[];
+  completedStrokes: Stroke[];
+  activeStroke: Stroke | null;
 };
+
+export type CanvasUpdate =
+  | { type: "synced"; state: CanvasState }
+  | { type: "strokeStarted"; stroke: Stroke }
+  | { type: "strokePointsAdded"; points: Point[] }
+  | { type: "strokeEnded" };

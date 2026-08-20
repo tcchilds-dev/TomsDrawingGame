@@ -29,6 +29,7 @@ const paintColours = [
 
 type PaintSelectionProps = {
   brushWidth: number;
+  disabled?: boolean;
   onBrushWidthChange: (width: number) => void;
   onClear: () => void;
   onColourChange: (colour: string) => void;
@@ -38,6 +39,7 @@ type PaintSelectionProps = {
 
 export default function PaintSelection({
   brushWidth,
+  disabled = false,
   onBrushWidthChange,
   onClear,
   onColourChange,
@@ -61,6 +63,7 @@ export default function PaintSelection({
                       ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100"
                       : ""
                   }`}
+                  disabled={disabled}
                   key={colour}
                   onClick={() => onColourChange(colour)}
                   style={{ backgroundColor: colour }}
@@ -71,13 +74,27 @@ export default function PaintSelection({
             })}
           </div>
 
-          <WidthSelection onChange={onBrushWidthChange} value={brushWidth} />
+          <WidthSelection
+            disabled={disabled}
+            onChange={onBrushWidthChange}
+            value={brushWidth}
+          />
 
           <div className="flex flex-col gap-2">
-            <button className="btn btn-neutral btn-sm w-20" onClick={onUndo} type="button">
+            <button
+              className="btn btn-neutral btn-sm w-20"
+              disabled={disabled}
+              onClick={onUndo}
+              type="button"
+            >
               Undo
             </button>
-            <button className="btn btn-neutral btn-sm w-20" onClick={onClear} type="button">
+            <button
+              className="btn btn-neutral btn-sm w-20"
+              disabled={disabled}
+              onClick={onClear}
+              type="button"
+            >
               Clear
             </button>
           </div>

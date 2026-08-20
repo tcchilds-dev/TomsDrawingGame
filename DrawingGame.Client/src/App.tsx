@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Game from "./components/Game";
 import Home from "./components/Home";
 import { GameConnection } from "./game/GameConnection";
-import type { GameState, RoomEntry } from "./game/types";
+import { applyCanvasUpdate, emptyCanvasState } from "./game/canvasState";
+import type { CanvasState, GameState, Point, RoomEntry } from "./game/types";
 
 function App() {
   const [gameConnection] = useState(() => new GameConnection());
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [canvasState, setCanvasState] =
+    useState<CanvasState>(emptyCanvasState);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [wordChoices, setWordChoices] = useState<string[]>([]);
   const [artistWord, setArtistWord] = useState<string | null>(null);
@@ -17,8 +20,12 @@ function App() {
   useEffect(() => {
     let isActive = true;
     const stopListeningForState = gameConnection.onGameStateChanged(setGameState);
+    const stopListeningForCanvas = gameConnection.onCanvasUpdated((update) => {
+      setCanvasState((state) => applyCanvasUpdate(state, update));
+    });
     const stopListeningForExpiry = gameConnection.onSessionExpired((reason) => {
       setGameState(null);
+      setCanvasState(emptyCanvasState);
       setPlayerId(null);
       setError(getErrorMessage(reason));
     });
@@ -44,6 +51,7 @@ function App() {
     return () => {
       isActive = false;
       stopListeningForState();
+      stopListeningForCanvas();
       stopListeningForExpiry();
     };
   }, [gameConnection]);
@@ -60,6 +68,32 @@ function App() {
   const roomId = gameState?.roomId;
   const phase = gameState?.phase;
   const currentArtistId = gameState?.currentArtistId;
+
+  useEffect(() => {
+    let isActive = true;
+    setCanvasState(emptyCanvasState);
+
+    if (!roomId) {
+      return;
+    }
+
+    void gameConnection
+      .getCanvasState()
+      .then((state) => {
+        if (isActive) {
+          setCanvasState(state);
+        }
+      })
+      .catch((reason: unknown) => {
+        if (isActive) {
+          setError(getErrorMessage(reason));
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [gameConnection, roomId]);
 
   useEffect(() => {
     let isActive = true;
@@ -120,6 +154,7 @@ function App() {
     try {
       await gameConnection.leaveRoom();
       setGameState(null);
+      setCanvasState(emptyCanvasState);
       setPlayerId(null);
     } catch (reason) {
       setError(getErrorMessage(reason));
@@ -154,16 +189,56 @@ function App() {
     }
   };
 
+  const runDrawingCommand = useCallback((request: () => Promise<void>) => {
+    void request().catch((reason: unknown) => {
+      setError(getErrorMessage(reason));
+    });
+  }, []);
+
+  const beginStroke = useCallback(
+    (colour: string, width: number, firstPoint: Point) => {
+      runDrawingCommand(() =>
+        gameConnection.beginStroke(colour, width, firstPoint),
+      );
+    },
+    [gameConnection, runDrawingCommand],
+  );
+
+  const addStrokePoints = useCallback(
+    (points: Point[]) => {
+      runDrawingCommand(() => gameConnection.addStrokePoints(points));
+    },
+    [gameConnection, runDrawingCommand],
+  );
+
+  const endStroke = useCallback(() => {
+    runDrawingCommand(() => gameConnection.endStroke());
+  }, [gameConnection, runDrawingCommand]);
+
+  const undoStroke = useCallback(() => {
+    runDrawingCommand(() => gameConnection.undoStroke());
+  }, [gameConnection, runDrawingCommand]);
+
+  const clearCanvas = useCallback(() => {
+    runDrawingCommand(() => gameConnection.clearCanvas());
+  }, [gameConnection, runDrawingCommand]);
+
   if (gameState) {
     return (
       <Game
         artistWord={artistWord}
+        canvasState={canvasState}
         currentPlayerId={playerId}
         error={error}
         isSubmitting={isSubmitting}
+        onAddStrokePoints={addStrokePoints}
+        onBeginStroke={beginStroke}
+        onClearCanvas={clearCanvas}
         onChooseWord={chooseWord}
+        onEndStroke={endStroke}
         onLeaveRoom={leaveRoom}
         onStartGame={startGame}
+        onUndoStroke={undoStroke}
         state={gameState}
         wordChoices={wordChoices}
       />

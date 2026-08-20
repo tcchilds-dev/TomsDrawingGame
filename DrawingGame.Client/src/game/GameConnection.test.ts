@@ -1,25 +1,28 @@
 import { HubConnectionState } from "@microsoft/signalr";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameConnection } from "./GameConnection";
-import type { GameState, RoomEntry } from "./types";
+import type { CanvasState, GameState, RoomEntry, Stroke } from "./types";
+
+type HubEventHandler = (...args: unknown[]) => void;
 
 class FakeHubConnection {
   state = HubConnectionState.Disconnected;
   nextResult: unknown;
 
   readonly invoke = vi.fn(async () => this.nextResult);
-  readonly handlers = new Map<string, (value: GameState) => void>();
+  readonly send = vi.fn(async () => undefined);
+  readonly handlers = new Map<string, HubEventHandler>();
   private reconnectedHandler: (() => Promise<void> | void) | null = null;
 
   async start() {
     this.state = HubConnectionState.Connected;
   }
 
-  on(methodName: string, handler: (value: GameState) => void) {
+  on(methodName: string, handler: HubEventHandler) {
     this.handlers.set(methodName, handler);
   }
 
-  off(methodName: string, handler: (value: GameState) => void) {
+  off(methodName: string, handler: HubEventHandler) {
     if (this.handlers.get(methodName) === handler) {
       this.handlers.delete(methodName);
     }
@@ -31,6 +34,10 @@ class FakeHubConnection {
 
   async reconnect() {
     await this.reconnectedHandler?.();
+  }
+
+  emit(methodName: string, ...args: unknown[]) {
+    this.handlers.get(methodName)?.(...args);
   }
 }
 
@@ -59,6 +66,11 @@ const roomEntry: RoomEntry = {
     playerId: "player-1",
   },
   state: gameState,
+};
+
+const canvasState: CanvasState = {
+  completedStrokes: [],
+  activeStroke: null,
 };
 
 describe("GameConnection", () => {
@@ -99,7 +111,9 @@ describe("GameConnection", () => {
 
     const reconnectedHub = new FakeHubConnection();
     reconnectedHub.state = HubConnectionState.Connected;
-    reconnectedHub.nextResult = roomEntry;
+    reconnectedHub.invoke
+      .mockResolvedValueOnce(roomEntry)
+      .mockResolvedValueOnce(canvasState);
     const connection = new GameConnection({
       connection: reconnectedHub,
       storage: sessionStorage,
@@ -110,6 +124,7 @@ describe("GameConnection", () => {
     await reconnectedHub.reconnect();
 
     expect(reconnectedHub.invoke).toHaveBeenCalledWith("RejoinRoom", roomEntry.session);
+    expect(reconnectedHub.invoke).toHaveBeenCalledWith("GetCanvasState");
     expect(stateChanged).toHaveBeenCalledWith(gameState);
   });
 
@@ -217,5 +232,82 @@ describe("GameConnection", () => {
 
     await expect(connection.getCurrentWord()).resolves.toBe("Castle");
     expect(hub.invoke).toHaveBeenCalledWith("GetCurrentWord");
+  });
+
+  it("requests a complete canvas snapshot", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    hub.nextResult = canvasState;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await expect(connection.getCanvasState()).resolves.toEqual(canvasState);
+    expect(hub.invoke).toHaveBeenCalledWith("GetCanvasState");
+  });
+
+  it("forwards incremental canvas events", () => {
+    const hub = new FakeHubConnection();
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    const canvasUpdated = vi.fn();
+    connection.onCanvasUpdated(canvasUpdated);
+    const stroke: Stroke = {
+      colour: "#111827",
+      width: 8,
+      points: [{ x: 0.25, y: 0.5 }],
+    };
+    const points = [{ x: 0.5, y: 0.75 }];
+
+    hub.emit("StrokeStarted", stroke);
+    hub.emit("StrokePointsAdded", points);
+    hub.emit("StrokeEnded");
+    hub.emit("SyncCanvas", canvasState);
+
+    expect(canvasUpdated).toHaveBeenNthCalledWith(1, {
+      type: "strokeStarted",
+      stroke,
+    });
+    expect(canvasUpdated).toHaveBeenNthCalledWith(2, {
+      type: "strokePointsAdded",
+      points,
+    });
+    expect(canvasUpdated).toHaveBeenNthCalledWith(3, { type: "strokeEnded" });
+    expect(canvasUpdated).toHaveBeenNthCalledWith(4, {
+      type: "synced",
+      state: canvasState,
+    });
+  });
+
+  it("sends drawing commands without waiting for hub results", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    const firstPoint = { x: 0.25, y: 0.5 };
+    const points = [{ x: 0.5, y: 0.75 }];
+
+    await connection.beginStroke("#111827", 8, firstPoint);
+    await connection.addStrokePoints(points);
+    await connection.endStroke();
+    await connection.undoStroke();
+    await connection.clearCanvas();
+
+    expect(hub.send).toHaveBeenNthCalledWith(
+      1,
+      "BeginStroke",
+      "#111827",
+      8,
+      firstPoint,
+    );
+    expect(hub.send).toHaveBeenNthCalledWith(2, "AddStrokePoints", points);
+    expect(hub.send).toHaveBeenNthCalledWith(3, "EndStroke");
+    expect(hub.send).toHaveBeenNthCalledWith(4, "UndoStroke");
+    expect(hub.send).toHaveBeenNthCalledWith(5, "ClearCanvas");
   });
 });
