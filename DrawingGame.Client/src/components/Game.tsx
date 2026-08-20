@@ -11,26 +11,36 @@ import Word from "./Word";
 import type { GameState } from "../game/types";
 
 type GameProps = {
+  artistWord: string | null;
   currentPlayerId: string | null;
   error: string | null;
   isSubmitting: boolean;
+  onChooseWord: (word: string) => Promise<void> | void;
   onLeaveRoom: () => Promise<void> | void;
   onStartGame: () => Promise<void> | void;
   state: GameState;
+  wordChoices: string[];
 };
 
 export default function Game({
+  artistWord,
   currentPlayerId,
   error,
   isSubmitting,
+  onChooseWord,
   onLeaveRoom,
   onStartGame,
   state,
+  wordChoices,
 }: GameProps) {
   const canvasRef = useRef<CanvasHandle>(null);
   const [selectedColour, setSelectedColour] = useState("#111827");
   const [brushWidth, setBrushWidth] = useState(8);
   const isOwner = currentPlayerId === state.ownerId;
+  const isArtist = currentPlayerId === state.currentArtistId;
+  const artistName = state.players.find(
+    (player) => player.id === state.currentArtistId,
+  )?.username;
 
   return (
     <main className="grid h-screen grid-cols-6 grid-rows-24 gap-2 p-2">
@@ -70,7 +80,16 @@ export default function Game({
       </aside>
 
       <header className="col-start-2 col-span-4 row-start-1 content-center text-center">
-        <Word></Word>
+        <Word
+          artistName={artistName ?? null}
+          artistWord={artistWord}
+          choices={wordChoices}
+          displayWord={state.displayWord}
+          isArtist={isArtist}
+          isSubmitting={isSubmitting}
+          onChooseWord={onChooseWord}
+          phase={state.phase}
+        />
       </header>
 
       <section className="col-start-2 col-span-4 row-start-2 row-span-20">

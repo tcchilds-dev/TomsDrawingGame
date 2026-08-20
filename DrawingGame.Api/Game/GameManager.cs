@@ -149,9 +149,100 @@ public class GameManager
         room.State.ArtistQueue.Clear();
         room.State.ArtistQueue.AddRange(playerIds);
         room.State.CurrentArtistIndex = 0;
+
+        room.State.WordChoices.Clear();
+        room.State.WordChoices.AddRange(_wordList.GetChoices(room.Config.WordSelectionSize));
+
         room.State.Phase = GamePhase.WordChoice;
 
         return CreateState(room);
+    }
+
+    public string[] GetWordChoices(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (room.State.Phase != GamePhase.WordChoice)
+        {
+            throw new GameException("Word choices are only available during word choice phase.");
+        }
+
+        var artistId = GetCurrentArtistId(room);
+
+        if (artistId is null)
+        {
+            throw new InvalidOperationException("The artist is not set.");
+        }
+
+        if (player.Id != artistId)
+        {
+            throw new GameException("Only the current artist can view the word choices.");
+        }
+
+        return room.State.WordChoices.ToArray();
+    }
+
+    public GameStateDto ChooseWord(string connectionId, string requestedWord)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (room.State.Phase != GamePhase.WordChoice)
+        {
+            throw new GameException("A word can only be chosen during the word choice phase.");
+        }
+
+        var artistId = GetCurrentArtistId(room);
+
+        if (artistId is null)
+        {
+            throw new InvalidOperationException("The artist is not set.");
+        }
+
+        if (player.Id != artistId)
+        {
+            throw new GameException("Only the current artist can choose the word.");
+        }
+
+        var selectedWord = room.State.WordChoices.FirstOrDefault(word =>
+            string.Equals(word, requestedWord, StringComparison.Ordinal)
+        );
+
+        if (selectedWord is null)
+        {
+            throw new GameException("The selected word was not one of the offered choices.");
+        }
+
+        room.State.CurrentWord = selectedWord;
+        room.State.MaskedWord = MaskWord(selectedWord);
+        room.State.WordChoices.Clear();
+        room.State.Phase = GamePhase.Playing;
+
+        return CreateState(room);
+    }
+
+    public string GetCurrentWord(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (room.State.Phase != GamePhase.Playing)
+        {
+            throw new GameException("The word is only available while drawing.");
+        }
+
+        var artistId = GetCurrentArtistId(room);
+
+        if (artistId is null)
+        {
+            throw new InvalidOperationException("The artist is not set.");
+        }
+
+        if (player.Id != artistId)
+        {
+            throw new GameException("Only the current artist may view the chosen word.");
+        }
+
+        return room.State.CurrentWord
+            ?? throw new InvalidOperationException("No current word is set.");
     }
 
     public RoomUpdate? RemoveDisconnectedPlayer(string connectionId)
@@ -191,6 +282,18 @@ public class GameManager
         }
 
         return new RoomUpdate(room.Id, CreateState(room));
+    }
+
+    private static string MaskWord(string word)
+    {
+        return string.Concat(word.Select(character => char.IsLetter(character) ? '_' : character));
+    }
+
+    private static string? GetCurrentArtistId(GameRoom room)
+    {
+        return room.State.ArtistQueue.Count > room.State.CurrentArtistIndex
+            ? room.State.ArtistQueue[room.State.CurrentArtistIndex]
+            : null;
     }
 
     private (GameRoom Room, Player Player) GetRoomMembership(string connectionId)
@@ -238,10 +341,7 @@ public class GameManager
 
     private static GameStateDto CreateState(GameRoom room)
     {
-        var currentArtistId =
-            room.State.ArtistQueue.Count > room.State.CurrentArtistIndex
-                ? room.State.ArtistQueue[room.State.CurrentArtistIndex]
-                : null;
+        var currentArtistId = GetCurrentArtistId(room);
 
         var players = room
             .Players.Values.Select(player => new PlayerDto(

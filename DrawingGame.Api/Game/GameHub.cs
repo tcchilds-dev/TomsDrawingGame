@@ -96,6 +96,45 @@ public class GameHub : Hub<IGameClient>
         await Clients.Group(state.RoomId).SyncGameState(state);
     }
 
+    public string[] GetWordChoices()
+    {
+        try
+        {
+            return _gameManager.GetWordChoices(Context.ConnectionId);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+    }
+
+    public async Task ChooseWord(string word)
+    {
+        GameStateDto state;
+        try
+        {
+            state = _gameManager.ChooseWord(Context.ConnectionId, word);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+
+        await Clients.Group(state.RoomId).SyncGameState(state);
+    }
+
+    public string GetCurrentWord()
+    {
+        try
+        {
+            return _gameManager.GetCurrentWord(Context.ConnectionId);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         _disconnectCleanup.ScheduleRemoval(Context.ConnectionId);

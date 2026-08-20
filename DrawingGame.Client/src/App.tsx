@@ -8,6 +8,8 @@ function App() {
   const [gameConnection] = useState(() => new GameConnection());
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [wordChoices, setWordChoices] = useState<string[]>([]);
+  const [artistWord, setArtistWord] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const initialRoomPromise = useRef<Promise<RoomEntry | null> | null>(null);
@@ -55,6 +57,47 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, [error]);
 
+  const roomId = gameState?.roomId;
+  const phase = gameState?.phase;
+  const currentArtistId = gameState?.currentArtistId;
+
+  useEffect(() => {
+    let isActive = true;
+
+    setWordChoices([]);
+    setArtistWord(null);
+
+    if (!playerId || playerId !== currentArtistId) {
+      return;
+    }
+
+    const loadPrivateArtistState = async () => {
+      try {
+        if (phase === "WordChoice") {
+          const choices = await gameConnection.getWordChoices();
+          if (isActive) {
+            setWordChoices(choices);
+          }
+        } else if (phase === "Playing") {
+          const word = await gameConnection.getCurrentWord();
+          if (isActive) {
+            setArtistWord(word);
+          }
+        }
+      } catch (reason) {
+        if (isActive) {
+          setError(getErrorMessage(reason));
+        }
+      }
+    };
+
+    void loadPrivateArtistState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentArtistId, gameConnection, phase, playerId, roomId]);
+
   const enterRoom = async (request: () => Promise<RoomEntry>) => {
     setError(null);
     setIsSubmitting(true);
@@ -98,15 +141,31 @@ function App() {
     }
   };
 
+  const chooseWord = async (word: string) => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await gameConnection.chooseWord(word);
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (gameState) {
     return (
       <Game
+        artistWord={artistWord}
         currentPlayerId={playerId}
         error={error}
         isSubmitting={isSubmitting}
+        onChooseWord={chooseWord}
         onLeaveRoom={leaveRoom}
         onStartGame={startGame}
         state={gameState}
+        wordChoices={wordChoices}
       />
     );
   }

@@ -40,12 +40,15 @@ describe("Game", () => {
 
     render(
       <Game
+        artistWord={null}
         currentPlayerId="player-1"
         error={null}
         isSubmitting={false}
+        onChooseWord={vi.fn()}
         onLeaveRoom={leaveRoom}
         onStartGame={vi.fn()}
         state={gameState}
+        wordChoices={[]}
       />,
     );
 
@@ -60,12 +63,15 @@ describe("Game", () => {
   it("disables leaving and displays an error when requested", () => {
     render(
       <Game
+        artistWord={null}
         currentPlayerId="player-1"
         error="Unable to leave room."
         isSubmitting
+        onChooseWord={vi.fn()}
         onLeaveRoom={vi.fn()}
         onStartGame={vi.fn()}
         state={gameState}
+        wordChoices={[]}
       />,
     );
 
@@ -81,12 +87,15 @@ describe("Game", () => {
 
     render(
       <Game
+        artistWord={null}
         currentPlayerId="player-1"
         error={null}
         isSubmitting={false}
+        onChooseWord={vi.fn()}
         onLeaveRoom={vi.fn()}
         onStartGame={startGame}
         state={gameState}
+        wordChoices={[]}
       />,
     );
 
@@ -98,12 +107,15 @@ describe("Game", () => {
   it("asks non-owners to wait instead of showing the start action", () => {
     render(
       <Game
+        artistWord={null}
         currentPlayerId="player-2"
         error={null}
         isSubmitting={false}
+        onChooseWord={vi.fn()}
         onLeaveRoom={vi.fn()}
         onStartGame={vi.fn()}
         state={gameState}
+        wordChoices={[]}
       />,
     );
 
@@ -118,12 +130,15 @@ describe("Game", () => {
   it("uses the synchronized round and hides lobby controls after starting", () => {
     render(
       <Game
+        artistWord={null}
         currentPlayerId="player-1"
         error={null}
         isSubmitting={false}
+        onChooseWord={vi.fn()}
         onLeaveRoom={vi.fn()}
         onStartGame={vi.fn()}
         state={{ ...gameState, currentRound: 1, phase: "WordChoice" }}
+        wordChoices={[]}
       />,
     );
 

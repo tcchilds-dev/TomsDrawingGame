@@ -175,4 +175,47 @@ describe("GameConnection", () => {
 
     expect(hub.invoke).toHaveBeenCalledWith("StartGame");
   });
+
+  it("requests private word choices for the current artist", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    hub.nextResult = ["Apple", "Castle", "Rocket"];
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await expect(connection.getWordChoices()).resolves.toEqual([
+      "Apple",
+      "Castle",
+      "Rocket",
+    ]);
+    expect(hub.invoke).toHaveBeenCalledWith("GetWordChoices");
+  });
+
+  it("submits only the selected word", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await connection.chooseWord("Castle");
+
+    expect(hub.invoke).toHaveBeenCalledWith("ChooseWord", "Castle");
+  });
+
+  it("requests the private current word without room state", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    hub.nextResult = "Castle";
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await expect(connection.getCurrentWord()).resolves.toBe("Castle");
+    expect(hub.invoke).toHaveBeenCalledWith("GetCurrentWord");
+  });
 });

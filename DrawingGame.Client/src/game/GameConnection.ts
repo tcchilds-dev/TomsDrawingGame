@@ -83,6 +83,21 @@ export class GameConnection {
     await this.connection.invoke("StartGame");
   }
 
+  async getWordChoices(): Promise<string[]> {
+    await this.start();
+    return (await this.connection.invoke("GetWordChoices")) as string[];
+  }
+
+  async chooseWord(word: string): Promise<void> {
+    await this.start();
+    await this.connection.invoke("ChooseWord", word);
+  }
+
+  async getCurrentWord(): Promise<string> {
+    await this.start();
+    return (await this.connection.invoke("GetCurrentWord")) as string;
+  }
+
   async rejoinRoom(): Promise<RoomEntry | null> {
     const session = this.roomSessionStore.load();
     if (!session) {
