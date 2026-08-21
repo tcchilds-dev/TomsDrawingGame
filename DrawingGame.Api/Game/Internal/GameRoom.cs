@@ -10,6 +10,8 @@ public class GameRoom
     public string OwnerId { get; set; }
     public GameConfig Config { get; }
 
+    public object Lock { get; } = new();
+
     public ConcurrentDictionary<string, Player> Players { get; } = new();
     public List<ChatMessageDto> ChatHistory { get; } = new();
 
