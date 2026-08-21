@@ -48,10 +48,12 @@ public class GameManager
     // <connection.Id, room member>
     private readonly ConcurrentDictionary<string, RoomMember> _members = new();
     private readonly WordList _wordList;
+    private readonly TimeProvider _timeProvider;
 
-    public GameManager(WordList wordList)
+    public GameManager(WordList wordList, TimeProvider timeProvider)
     {
         _wordList = wordList;
+        _timeProvider = timeProvider;
     }
 
     public RoomEntryDto CreateRoom(string connectionId, string username)
@@ -201,17 +203,16 @@ public class GameManager
                 throw new GameException("At least two players are required to start the game.");
             }
 
-            var playerIds = room.Players.Keys;
-
-            room.State.CurrentRound = 1;
+            var playerIds = room.Players.Keys.ToArray();
+            Random.Shared.Shuffle(playerIds);
             room.State.ArtistQueue.Clear();
             room.State.ArtistQueue.AddRange(playerIds);
+            room.State.CurrentRound = 1;
             room.State.CurrentArtistIndex = 0;
 
-            room.State.WordChoices.Clear();
-            room.State.WordChoices.AddRange(_wordList.GetChoices(room.Config.WordSelectionSize));
-
-            room.State.Phase = GamePhase.WordChoice;
+            var now = _timeProvider.GetUtcNow();
+            room.State.GameStartedAt = now;
+            BeginWordChoice(room, now);
 
             return CreateState(room);
         }
@@ -227,7 +228,9 @@ public class GameManager
 
             if (room.State.Phase != GamePhase.WordChoice)
             {
-                throw new GameException("Word choices are only available during word choice phase.");
+                throw new GameException(
+                    "Word choices are only available during word choice phase."
+                );
             }
 
             var artistId = GetCurrentArtistId(room);
@@ -280,10 +283,7 @@ public class GameManager
                 throw new GameException("The selected word was not one of the offered choices.");
             }
 
-            room.State.CurrentWord = selectedWord;
-            room.State.MaskedWord = MaskWord(selectedWord);
-            room.State.WordChoices.Clear();
-            room.State.Phase = GamePhase.Playing;
+            BeginPlaying(room, selectedWord, _timeProvider.GetUtcNow());
 
             return CreateState(room);
         }
@@ -358,10 +358,7 @@ public class GameManager
         {
             EnsureRoomMembershipIsCurrent(connectionId, room, player);
 
-            if (
-                player.Id != GetCurrentArtistId(room)
-                || room.State.Phase != GamePhase.Playing
-            )
+            if (player.Id != GetCurrentArtistId(room) || room.State.Phase != GamePhase.Playing)
             {
                 return null;
             }
@@ -482,13 +479,13 @@ public class GameManager
         }
     }
 
-    public (string?, ChatMessageDto?) ProcessMessage(string connectionId, string message)
+    public MessageUpdate? ProcessMessage(string connectionId, string message)
     {
         var trimmedMessage = message.Trim();
 
         if (trimmedMessage.Length is < 1)
         {
-            return (null, null);
+            return null;
         }
         else if (trimmedMessage.Length is > 200)
         {
@@ -503,7 +500,7 @@ public class GameManager
 
             if (player.Id == GetCurrentArtistId(room) && room.State.Phase == GamePhase.Playing)
             {
-                return (null, null);
+                return null;
             }
 
             if (
@@ -511,7 +508,7 @@ public class GameManager
                 && room.State.Phase == GamePhase.Playing
             )
             {
-                return (null, null);
+                return null;
             }
 
             if (IsCorrectGuess(trimmedMessage, room))
@@ -520,14 +517,26 @@ public class GameManager
                     player.Id,
                     player.UserName,
                     null,
-                    DateTimeOffset.Now,
+                    _timeProvider.GetUtcNow(),
                     ChatMessageType.CorrectGuess
                 );
 
                 room.ChatHistory.Add(processedMessage);
                 room.State.CorrectAnswerPlayerIds.Add(player.Id);
 
-                return (room.Id, processedMessage);
+                RoomUpdate? transition = null;
+
+                if (EveryoneHasGuessed(room))
+                {
+                    var canvasWasCleared = FinishTurn(room, _timeProvider.GetUtcNow());
+                    transition = new RoomUpdate(
+                        room.Id,
+                        CreateState(room),
+                        canvasWasCleared ? CreateCanvasState(room) : null
+                    );
+                }
+
+                return new MessageUpdate(room.Id, processedMessage, transition);
             }
             else
             {
@@ -535,13 +544,13 @@ public class GameManager
                     player.Id,
                     player.UserName,
                     trimmedMessage,
-                    DateTimeOffset.Now,
+                    _timeProvider.GetUtcNow(),
                     ChatMessageType.Chat
                 );
 
                 room.ChatHistory.Add(processedMessage);
 
-                return (room.Id, processedMessage);
+                return new MessageUpdate(room.Id, processedMessage);
             }
         }
     }
@@ -579,11 +588,24 @@ public class GameManager
                 return null;
             }
 
+            var state = room.State;
+            var removedArtistIndex = state.ArtistQueue.IndexOf(player.Id);
+            var wasCurrentArtist = player.Id == GetCurrentArtistId(room);
+
             _members.TryRemove(connectionId, out _);
             room.Players.TryRemove(player.Id, out _);
-            room.State.Scores.Remove(player.Id);
-            room.State.CorrectAnswerPlayerIds.Remove(player.Id);
-            room.State.ArtistQueue.RemoveAll(playerId => playerId == player.Id);
+            state.Scores.Remove(player.Id);
+            state.CorrectAnswerPlayerIds.Remove(player.Id);
+
+            if (removedArtistIndex >= 0)
+            {
+                state.ArtistQueue.RemoveAt(removedArtistIndex);
+
+                if (removedArtistIndex < state.CurrentArtistIndex)
+                {
+                    state.CurrentArtistIndex--;
+                }
+            }
 
             if (room.Players.Count == 0)
             {
@@ -596,8 +618,210 @@ public class GameManager
                 room.OwnerId = room.Players.Keys.First();
             }
 
-            return new RoomUpdate(room.Id, CreateState(room));
+            var canvasWasCleared = false;
+
+            if (room.Players.Count < 2 && state.Phase != GamePhase.Lobby)
+            {
+                ResetToLobby(room);
+                canvasWasCleared = true;
+            }
+            else if (state.Phase is GamePhase.WordChoice or GamePhase.Playing)
+            {
+                if (wasCurrentArtist)
+                {
+                    canvasWasCleared = ContinueAfterArtistRemoval(
+                        room,
+                        _timeProvider.GetUtcNow()
+                    );
+                }
+                else if (state.Phase == GamePhase.Playing && EveryoneHasGuessed(room))
+                {
+                    canvasWasCleared = FinishTurn(room, _timeProvider.GetUtcNow());
+                }
+            }
+
+            return new RoomUpdate(
+                room.Id,
+                CreateState(room),
+                canvasWasCleared ? CreateCanvasState(room) : null
+            );
         }
+    }
+
+    public IReadOnlyList<RoomUpdate> AdvanceExpiredPhases()
+    {
+        var now = _timeProvider.GetUtcNow();
+        var updates = new List<RoomUpdate>();
+
+        foreach (var room in _rooms.Values)
+        {
+            lock (room.Lock)
+            {
+                if (
+                    !_rooms.TryGetValue(room.Id, out var currentRoom)
+                    || !ReferenceEquals(currentRoom, room)
+                )
+                {
+                    continue;
+                }
+
+                var deadline = room.State.PhaseEndsAt;
+
+                if (deadline is null || deadline > now)
+                {
+                    continue;
+                }
+
+                switch (room.State.Phase)
+                {
+                    case GamePhase.WordChoice:
+                        var word =
+                            room.State.WordChoices.FirstOrDefault()
+                            ?? throw new InvalidOperationException(
+                                "No word choices are available."
+                            );
+                        BeginPlaying(room, word, now);
+                        updates.Add(new RoomUpdate(room.Id, CreateState(room)));
+                        break;
+
+                    case GamePhase.Playing:
+                        var canvasWasCleared = FinishTurn(room, now);
+                        updates.Add(
+                            new RoomUpdate(
+                                room.Id,
+                                CreateState(room),
+                                canvasWasCleared ? CreateCanvasState(room) : null
+                            )
+                        );
+                        break;
+                }
+            }
+        }
+        return updates;
+    }
+
+    private void BeginWordChoice(GameRoom room, DateTimeOffset now)
+    {
+        var state = room.State;
+
+        state.CurrentWord = null;
+        state.MaskedWord = null;
+        state.WordChoices.Clear();
+        state.WordChoices.AddRange(_wordList.GetChoices(room.Config.WordSelectionSize));
+
+        state.CorrectAnswerPlayerIds.Clear();
+        state.CompletedStrokes.Clear();
+        state.ActiveStroke = null;
+
+        state.Phase = GamePhase.WordChoice;
+        state.PhaseEndsAt = now.AddSeconds(room.Config.WordChoiceTimerSeconds);
+    }
+
+    private static void BeginPlaying(GameRoom room, string selectedWord, DateTimeOffset now)
+    {
+        var state = room.State;
+
+        state.CurrentWord = selectedWord;
+        state.MaskedWord = MaskWord(selectedWord);
+        state.WordChoices.Clear();
+
+        state.Phase = GamePhase.Playing;
+        state.PhaseEndsAt = now.AddSeconds(room.Config.DrawTimerSeconds);
+    }
+
+    private bool FinishTurn(GameRoom room, DateTimeOffset now)
+    {
+        var state = room.State;
+
+        state.CurrentArtistIndex++;
+
+        if (state.CurrentArtistIndex >= state.ArtistQueue.Count)
+        {
+            state.CurrentArtistIndex = 0;
+            var nextRound =
+                (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
+
+            if (nextRound > room.Config.NumberOfRounds)
+            {
+                BeginResults(room);
+                return false;
+            }
+
+            state.CurrentRound = nextRound;
+        }
+
+        BeginWordChoice(room, now);
+        return true;
+    }
+
+    private bool ContinueAfterArtistRemoval(GameRoom room, DateTimeOffset now)
+    {
+        var state = room.State;
+
+        if (state.CurrentArtistIndex >= state.ArtistQueue.Count)
+        {
+            state.CurrentArtistIndex = 0;
+            var nextRound =
+                (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
+
+            if (nextRound > room.Config.NumberOfRounds)
+            {
+                BeginResults(room);
+                return false;
+            }
+
+            state.CurrentRound = nextRound;
+        }
+
+        BeginWordChoice(room, now);
+        return true;
+    }
+
+    private static void BeginResults(GameRoom room)
+    {
+        var state = room.State;
+
+        state.Phase = GamePhase.Results;
+        state.PhaseEndsAt = null;
+        state.CurrentWord = null;
+        state.MaskedWord = null;
+        state.WordChoices.Clear();
+        state.CorrectAnswerPlayerIds.Clear();
+        state.ArtistQueue.Clear();
+        state.CurrentArtistIndex = 0;
+    }
+
+    private static void ResetToLobby(GameRoom room)
+    {
+        var state = room.State;
+
+        state.Phase = GamePhase.Lobby;
+        state.CurrentRound = null;
+        state.CurrentArtistIndex = 0;
+        state.ArtistQueue.Clear();
+        state.CurrentWord = null;
+        state.MaskedWord = null;
+        state.WordChoices.Clear();
+        state.CorrectAnswerPlayerIds.Clear();
+        state.GameStartedAt = null;
+        state.PhaseEndsAt = null;
+        state.CompletedStrokes.Clear();
+        state.ActiveStroke = null;
+
+        foreach (var playerId in room.Players.Keys)
+        {
+            state.Scores[playerId] = 0;
+        }
+    }
+
+    private static bool EveryoneHasGuessed(GameRoom room)
+    {
+        var artistId = GetCurrentArtistId(room);
+
+        return room.Players.Count > 1
+            && room.Players.Keys
+                .Where(playerId => playerId != artistId)
+                .All(room.State.CorrectAnswerPlayerIds.Contains);
     }
 
     private static string MaskWord(string word)
@@ -636,11 +860,7 @@ public class GameManager
         return (room, player);
     }
 
-    private void EnsureRoomMembershipIsCurrent(
-        string connectionId,
-        GameRoom room,
-        Player player
-    )
+    private void EnsureRoomMembershipIsCurrent(string connectionId, GameRoom room, Player player)
     {
         if (
             !_members.TryGetValue(connectionId, out var member)
@@ -748,4 +968,14 @@ public class GameManager
     }
 }
 
-public sealed record RoomUpdate(string RoomId, GameStateDto? State);
+public sealed record RoomUpdate(
+    string RoomId,
+    GameStateDto? State,
+    CanvasStateDto? CanvasState = null
+);
+
+public sealed record MessageUpdate(
+    string RoomId,
+    ChatMessageDto Message,
+    RoomUpdate? Transition = null
+);

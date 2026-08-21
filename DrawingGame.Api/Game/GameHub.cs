@@ -144,11 +144,7 @@ public class GameHub : Hub<IGameClient>
         }
 
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, update.RoomId);
-
-        if (update?.State is not null)
-        {
-            await Clients.Group(update.RoomId).SyncGameState(update.State);
-        }
+        await PublishRoomUpdate(update);
     }
 
     public async Task StartGame()
@@ -207,14 +203,32 @@ public class GameHub : Hub<IGameClient>
 
     public async Task SendMessage(string message)
     {
-        var (roomId, processedMessage) = _gameManager.ProcessMessage(Context.ConnectionId, message);
+        var update = _gameManager.ProcessMessage(Context.ConnectionId, message);
 
-        if (roomId is null || processedMessage is null)
+        if (update is null)
         {
             return;
         }
 
-        await Clients.Group(roomId).MessageReceived(processedMessage);
+        await Clients.Group(update.RoomId).MessageReceived(update.Message);
+
+        if (update.Transition is not null)
+        {
+            await PublishRoomUpdate(update.Transition);
+        }
+    }
+
+    private async Task PublishRoomUpdate(RoomUpdate update)
+    {
+        if (update.State is not null)
+        {
+            await Clients.Group(update.RoomId).SyncGameState(update.State);
+        }
+
+        if (update.CanvasState is not null)
+        {
+            await Clients.Group(update.RoomId).SyncCanvas(update.CanvasState);
+        }
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)

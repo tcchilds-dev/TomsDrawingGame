@@ -167,7 +167,7 @@ export default function Game({
       </section>
 
       <aside className="col-start-6 row-start-1 content-center text-center">
-        <Timer />
+        <Timer phaseEndsAt={state.phaseEndsAt} />
       </aside>
       <aside className="col-start-6 row-start-2 row-span-20 min-h-0">
         <Chat

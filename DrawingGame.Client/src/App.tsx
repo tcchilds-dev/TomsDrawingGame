@@ -17,11 +17,21 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const initialRoomPromise = useRef<Promise<RoomEntry | null> | null>(null);
+  const currentPhaseRef = useRef<GameState["phase"] | null>(null);
+  const applyGameState = useCallback((state: GameState | null) => {
+    currentPhaseRef.current = state?.phase ?? null;
+    setGameState(state);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
-    const stopListeningForState = gameConnection.onGameStateChanged(setGameState);
+    const stopListeningForState =
+      gameConnection.onGameStateChanged(applyGameState);
     const stopListeningForCanvas = gameConnection.onCanvasUpdated((update) => {
+      if (update.type !== "synced" && currentPhaseRef.current !== "Playing") {
+        return;
+      }
+
       setCanvasState((state) => applyCanvasUpdate(state, update));
     });
     const stopListeningForMessages = gameConnection.onMessageReceived(
@@ -32,7 +42,7 @@ function App() {
       },
     );
     const stopListeningForExpiry = gameConnection.onSessionExpired((reason) => {
-      setGameState(null);
+      applyGameState(null);
       setCanvasState(emptyCanvasState);
       setPlayerId(null);
       setError(getErrorMessage(reason));
@@ -46,7 +56,7 @@ function App() {
     void initialRoomPromise.current
       .then((entry) => {
         if (isActive && entry) {
-          setGameState(entry.state);
+          applyGameState(entry.state);
           setPlayerId(entry.session.playerId);
         }
       })
@@ -63,7 +73,7 @@ function App() {
       stopListeningForMessages();
       stopListeningForExpiry();
     };
-  }, [gameConnection]);
+  }, [applyGameState, gameConnection]);
 
   useEffect(() => {
     if (!error) {
@@ -147,7 +157,7 @@ function App() {
 
     try {
       const entry = await request();
-      setGameState(entry.state);
+      applyGameState(entry.state);
       setPlayerId(entry.session.playerId);
     } catch (reason) {
       setError(getErrorMessage(reason));
@@ -162,7 +172,7 @@ function App() {
 
     try {
       await gameConnection.leaveRoom();
-      setGameState(null);
+      applyGameState(null);
       setCanvasState(emptyCanvasState);
       setPlayerId(null);
     } catch (reason) {

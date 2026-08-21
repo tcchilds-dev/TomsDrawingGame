@@ -50,6 +50,10 @@ public sealed class DisconnectCleanup
             {
                 await _hubContext.Clients.Group(update.RoomId).SyncGameState(update.State);
             }
+            if (update?.CanvasState is not null)
+            {
+                await _hubContext.Clients.Group(update.RoomId).SyncCanvas(update.CanvasState);
+            }
         }
         catch (OperationCanceledException)
             when (_applicationLifetime.ApplicationStopping.IsCancellationRequested) { }
