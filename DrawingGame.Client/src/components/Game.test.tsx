@@ -27,6 +27,7 @@ const drawingProps = {
   onBeginStroke: vi.fn(),
   onClearCanvas: vi.fn(),
   onEndStroke: vi.fn(),
+  onPlayAgain: vi.fn(),
   onSendMessage: vi.fn(async () => undefined),
   onUndoStroke: vi.fn(),
 };
@@ -337,5 +338,57 @@ describe("Game", () => {
     );
 
     expect(screen.getByPlaceholderText("Type a guess")).toBeEnabled();
+  });
+
+  it("replaces the canvas with results and lets the owner play again", async () => {
+    const user = userEvent.setup();
+    const playAgain = vi.fn(async () => undefined);
+    const resultsState: GameState = {
+      ...gameState,
+      phase: "Results",
+      currentRound: 3,
+      players: [
+        {
+          id: "player-1",
+          username: "Alice",
+          score: 240,
+          isOwner: true,
+          isArtist: false,
+          hasCorrectlyGuessed: false,
+        },
+        {
+          id: "player-2",
+          username: "Bob",
+          score: 190,
+          isOwner: false,
+          isArtist: false,
+          hasCorrectlyGuessed: false,
+        },
+      ],
+    };
+
+    render(
+      <Game
+        {...drawingProps}
+        artistWord={null}
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onPlayAgain={playAgain}
+        onStartGame={vi.fn()}
+        state={resultsState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+    expect(screen.getAllByText("Alice")).toHaveLength(2);
+    expect(screen.queryByLabelText("Drawing canvas")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Play Again" }));
+
+    expect(playAgain).toHaveBeenCalledOnce();
   });
 });

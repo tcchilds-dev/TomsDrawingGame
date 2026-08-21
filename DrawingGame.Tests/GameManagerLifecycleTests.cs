@@ -102,6 +102,44 @@ public class GameManagerLifecycleTests
     }
 
     [Fact]
+    public void CorrectGuesses_AwardDescendingGuesserAndProportionalArtistPoints()
+    {
+        var game = CreateGame(4);
+        var choosing = game.Manager.StartGame(game.OwnerConnectionId);
+        var artistId = Assert.IsType<string>(choosing.CurrentArtistId);
+        var artistConnectionId = GetConnectionId(game, artistId);
+        var guessers = game.Players.Where(player => player.PlayerId != artistId).ToArray();
+        var word = game.Manager.GetWordChoices(artistConnectionId)[0];
+        game.Manager.ChooseWord(artistConnectionId, word);
+
+        var firstUpdate = Assert.IsType<MessageUpdate>(
+            game.Manager.ProcessMessage(guessers[0].ConnectionId, word)
+        );
+        var firstState = Assert.IsType<GameStateDto>(firstUpdate.StateUpdate?.State);
+
+        Assert.Equal(100, GetScore(firstState, guessers[0].PlayerId));
+        Assert.Equal(33, GetScore(firstState, artistId));
+        Assert.Null(game.Manager.ProcessMessage(guessers[0].ConnectionId, word));
+
+        var secondUpdate = Assert.IsType<MessageUpdate>(
+            game.Manager.ProcessMessage(guessers[1].ConnectionId, word)
+        );
+        var secondState = Assert.IsType<GameStateDto>(secondUpdate.StateUpdate?.State);
+
+        Assert.Equal(90, GetScore(secondState, guessers[1].PlayerId));
+        Assert.Equal(66, GetScore(secondState, artistId));
+
+        var thirdUpdate = Assert.IsType<MessageUpdate>(
+            game.Manager.ProcessMessage(guessers[2].ConnectionId, word)
+        );
+        var thirdState = Assert.IsType<GameStateDto>(thirdUpdate.StateUpdate?.State);
+
+        Assert.Equal(80, GetScore(thirdState, guessers[2].PlayerId));
+        Assert.Equal(99, GetScore(thirdState, artistId));
+        Assert.Equal(GamePhase.WordChoice, thirdState.Phase);
+    }
+
+    [Fact]
     public void EveryoneGuessingCorrectly_EndsTurnEarly()
     {
         var game = CreateGame(2);
@@ -116,9 +154,9 @@ public class GameManagerLifecycleTests
         var messageUpdate = Assert.IsType<MessageUpdate>(
             game.Manager.ProcessMessage(guesserConnectionId, word)
         );
-        var transition = Assert.IsType<RoomUpdate>(messageUpdate.Transition);
-        var state = Assert.IsType<GameStateDto>(transition.State);
-        var canvas = Assert.IsType<CanvasStateDto>(transition.CanvasState);
+        var stateUpdate = Assert.IsType<RoomUpdate>(messageUpdate.StateUpdate);
+        var state = Assert.IsType<GameStateDto>(stateUpdate.State);
+        var canvas = Assert.IsType<CanvasStateDto>(stateUpdate.CanvasState);
 
         Assert.Equal(GamePhase.WordChoice, state.Phase);
         Assert.NotEqual(choosing.CurrentArtistId, state.CurrentArtistId);
@@ -166,7 +204,8 @@ public class GameManagerLifecycleTests
         var correctGuess = Assert.IsType<MessageUpdate>(
             game.Manager.ProcessMessage(guessers[0].ConnectionId, word)
         );
-        Assert.Null(correctGuess.Transition);
+        var scoreUpdate = Assert.IsType<RoomUpdate>(correctGuess.StateUpdate);
+        Assert.Equal(GamePhase.Playing, scoreUpdate.State?.Phase);
 
         var departure = Assert.IsType<RoomUpdate>(
             game.Manager.RemoveDisconnectedPlayer(guessers[1].ConnectionId)
@@ -204,6 +243,58 @@ public class GameManagerLifecycleTests
         Assert.Null(canvas.ActiveStroke);
     }
 
+    [Fact]
+    public void PlayAgain_ReturnsTheExistingRoomToLobby()
+    {
+        var game = CreateGame(2);
+        game.Manager.ProcessMessage(game.OwnerConnectionId, "Good game!");
+        var results = AdvanceToResults(game);
+        var playerIds = results.Players.Select(player => player.Id).ToHashSet();
+
+        var update = game.Manager.PlayAgain(game.OwnerConnectionId);
+        var lobby = Assert.IsType<GameStateDto>(update.State);
+        var canvas = Assert.IsType<CanvasStateDto>(update.CanvasState);
+
+        Assert.Equal(GamePhase.Lobby, lobby.Phase);
+        Assert.Null(lobby.CurrentRound);
+        Assert.Null(lobby.CurrentArtistId);
+        Assert.Null(lobby.DisplayWord);
+        Assert.Null(lobby.PhaseEndsAt);
+        Assert.True(playerIds.SetEquals(lobby.Players.Select(player => player.Id)));
+        Assert.All(lobby.Players, player => Assert.Equal(0, player.Score));
+        Assert.Contains(lobby.ChatHistory, message => message.Message == "Good game!");
+        Assert.Empty(canvas.CompletedStrokes);
+        Assert.Null(canvas.ActiveStroke);
+
+        var restarted = game.Manager.StartGame(game.OwnerConnectionId);
+        Assert.Equal(GamePhase.WordChoice, restarted.Phase);
+    }
+
+    [Fact]
+    public void PlayAgain_RejectsNonOwnersAndGamesThatHaveNotFinished()
+    {
+        var activeGame = CreateGame(2);
+        var activeException = Assert.Throws<GameException>(() =>
+            activeGame.Manager.PlayAgain(activeGame.OwnerConnectionId)
+        );
+
+        Assert.Equal(
+            "A rematch can only be requested from the results screen.",
+            activeException.Message
+        );
+
+        var finishedGame = CreateGame(2);
+        AdvanceToResults(finishedGame);
+        var nonOwnerConnectionId = finishedGame.Players.Single(player =>
+            player.ConnectionId != finishedGame.OwnerConnectionId
+        ).ConnectionId;
+        var ownerException = Assert.Throws<GameException>(() =>
+            finishedGame.Manager.PlayAgain(nonOwnerConnectionId)
+        );
+
+        Assert.Equal("Only the owner may play again.", ownerException.Message);
+    }
+
     private static TestGame CreateGame(int playerCount)
     {
         var clock = new ManualTimeProvider(
@@ -231,9 +322,36 @@ public class GameManagerLifecycleTests
         return new TestGame(manager, clock, "connection-1", players);
     }
 
+    private static GameStateDto AdvanceToResults(TestGame game)
+    {
+        var state = game.Manager.StartGame(game.OwnerConnectionId);
+        var turnCount = state.Config.NumberOfRounds * state.Players.Count;
+
+        for (var turn = 0; turn < turnCount; turn++)
+        {
+            game.Clock.Advance(TimeSpan.FromSeconds(state.Config.WordChoiceTimerSeconds));
+            state = Assert.IsType<GameStateDto>(
+                Assert.Single(game.Manager.AdvanceExpiredPhases()).State
+            );
+
+            game.Clock.Advance(TimeSpan.FromSeconds(state.Config.DrawTimerSeconds));
+            state = Assert.IsType<GameStateDto>(
+                Assert.Single(game.Manager.AdvanceExpiredPhases()).State
+            );
+        }
+
+        Assert.Equal(GamePhase.Results, state.Phase);
+        return state;
+    }
+
     private static string GetConnectionId(TestGame game, string? playerId)
     {
         return game.Players.Single(player => player.PlayerId == playerId).ConnectionId;
+    }
+
+    private static int GetScore(GameStateDto state, string playerId)
+    {
+        return state.Players.Single(player => player.Id == playerId).Score;
     }
 
     private static string MaskWord(string word)

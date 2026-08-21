@@ -19,7 +19,7 @@ public class GameManagerChatTests
         Assert.Equal(entry.Session.RoomId, update.RoomId);
         Assert.Equal(ChatMessageType.Chat, update.Message.MessageType);
         Assert.Equal("Hello everyone", update.Message.Message);
-        Assert.Null(update.Transition);
+        Assert.Null(update.StateUpdate);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class GameManagerChatTests
         Assert.Equal(game.Guesser.Session.RoomId, update.RoomId);
         Assert.Equal(ChatMessageType.CorrectGuess, update.Message.MessageType);
         Assert.Null(update.Message.Message);
-        Assert.Null(update.Transition);
+        Assert.NotNull(update.StateUpdate);
 
         var refreshedEntry = game.Manager.RejoinRoom(
             game.GuesserConnectionId,

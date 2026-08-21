@@ -5,6 +5,7 @@ import Chat from "./Chat";
 import Input from "./Input";
 import PaintSelection from "./PaintSelection";
 import PlayerList from "./PlayerList";
+import Results from "./Results";
 import Timer from "./Timer";
 import Word from "./Word";
 import type { CanvasState, GameState, Point } from "../game/types";
@@ -21,6 +22,7 @@ type GameProps = {
   onChooseWord: (word: string) => Promise<void> | void;
   onEndStroke: () => void;
   onLeaveRoom: () => Promise<void> | void;
+  onPlayAgain: () => Promise<void> | void;
   onSendMessage: (message: string) => Promise<void> | void;
   onStartGame: () => Promise<void> | void;
   onUndoStroke: () => void;
@@ -40,6 +42,7 @@ export default function Game({
   onChooseWord,
   onEndStroke,
   onLeaveRoom,
+  onPlayAgain,
   onSendMessage,
   onStartGame,
   onUndoStroke,
@@ -93,7 +96,11 @@ export default function Game({
   return (
     <main className="grid h-screen grid-cols-6 grid-rows-24 gap-2 p-2">
       <aside className="col-start-1 row-start-1 text-center">
-        {state.currentRound === null ? "Lobby" : `Round: ${state.currentRound}`}
+        {state.phase === "Results"
+          ? "Results"
+          : state.currentRound === null
+            ? "Lobby"
+            : `Round: ${state.currentRound}`}
       </aside>
       <aside className="col-start-1 row-start-2 row-span-17">
         <PlayerList players={state.players}></PlayerList>
@@ -141,15 +148,24 @@ export default function Game({
       </header>
 
       <section className="col-start-2 col-span-4 row-start-2 row-span-20">
-        <Canvas
-          brushWidth={brushWidth}
-          canvasState={canvasState}
-          colour={selectedColour}
-          isDrawingEnabled={isDrawingEnabled}
-          onAddStrokePoints={onAddStrokePoints}
-          onBeginStroke={onBeginStroke}
-          onEndStroke={onEndStroke}
-        />
+        {state.phase === "Results" ? (
+          <Results
+            isOwner={isOwner}
+            isSubmitting={isSubmitting}
+            onPlayAgain={onPlayAgain}
+            players={state.players}
+          />
+        ) : (
+          <Canvas
+            brushWidth={brushWidth}
+            canvasState={canvasState}
+            colour={selectedColour}
+            isDrawingEnabled={isDrawingEnabled}
+            onAddStrokePoints={onAddStrokePoints}
+            onBeginStroke={onBeginStroke}
+            onEndStroke={onEndStroke}
+          />
+        )}
       </section>
 
       <section className="col-start-2 col-span-4 row-start-22 row-span-4">

@@ -513,6 +513,8 @@ public class GameManager
 
             if (IsCorrectGuess(trimmedMessage, room))
             {
+                AwardPoints(room, player.Id);
+
                 var processedMessage = new ChatMessageDto(
                     player.Id,
                     player.UserName,
@@ -524,19 +526,16 @@ public class GameManager
                 room.ChatHistory.Add(processedMessage);
                 room.State.CorrectAnswerPlayerIds.Add(player.Id);
 
-                RoomUpdate? transition = null;
+                CanvasStateDto? canvasState = null;
 
                 if (EveryoneHasGuessed(room))
                 {
                     var canvasWasCleared = FinishTurn(room, _timeProvider.GetUtcNow());
-                    transition = new RoomUpdate(
-                        room.Id,
-                        CreateState(room),
-                        canvasWasCleared ? CreateCanvasState(room) : null
-                    );
+                    canvasState = canvasWasCleared ? CreateCanvasState(room) : null;
                 }
 
-                return new MessageUpdate(room.Id, processedMessage, transition);
+                var stateUpdate = new RoomUpdate(room.Id, CreateState(room), canvasState);
+                return new MessageUpdate(room.Id, processedMessage, stateUpdate);
             }
             else
             {
@@ -552,6 +551,32 @@ public class GameManager
 
                 return new MessageUpdate(room.Id, processedMessage);
             }
+        }
+    }
+
+    public RoomUpdate PlayAgain(string connectionId)
+    {
+        var (room, player) = GetRoomMembership(connectionId);
+
+        lock (room.Lock)
+        {
+            EnsureRoomMembershipIsCurrent(connectionId, room, player);
+
+            if (room.OwnerId != player.Id)
+            {
+                throw new GameException("Only the owner may play again.");
+            }
+
+            if (room.State.Phase != GamePhase.Results)
+            {
+                throw new GameException(
+                    "A rematch can only be requested from the results screen."
+                );
+            }
+
+            ResetToLobby(room);
+
+            return new RoomUpdate(room.Id, CreateState(room), CreateCanvasState(room));
         }
     }
 
@@ -824,6 +849,24 @@ public class GameManager
                 .All(room.State.CorrectAnswerPlayerIds.Contains);
     }
 
+    private static void AwardPoints(GameRoom room, string guesserId)
+    {
+        var artistId = GetCurrentArtistId(room)
+            ?? throw new InvalidOperationException("The artist is not set.");
+        var guesserCount = room.Players.Count - 1;
+
+        if (guesserCount < 1)
+        {
+            throw new InvalidOperationException("An active turn requires at least one guesser.");
+        }
+
+        var guesserPoints = 100 - (room.State.CorrectAnswerPlayerIds.Count * 10);
+        var artistPoints = 100 / guesserCount;
+
+        room.State.Scores[guesserId] += guesserPoints;
+        room.State.Scores[artistId] += artistPoints;
+    }
+
     private static string MaskWord(string word)
     {
         return string.Concat(word.Select(character => char.IsLetter(character) ? '_' : character));
@@ -977,5 +1020,5 @@ public sealed record RoomUpdate(
 public sealed record MessageUpdate(
     string RoomId,
     ChatMessageDto Message,
-    RoomUpdate? Transition = null
+    RoomUpdate? StateUpdate = null
 );

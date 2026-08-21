@@ -125,6 +125,11 @@ export class GameConnection {
     await this.connection.invoke("StartGame");
   }
 
+  async playAgain(): Promise<void> {
+    await this.start();
+    await this.connection.invoke("PlayAgain");
+  }
+
   async getWordChoices(): Promise<string[]> {
     await this.start();
     return (await this.connection.invoke("GetWordChoices")) as string[];

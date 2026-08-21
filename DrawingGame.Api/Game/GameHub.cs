@@ -212,10 +212,25 @@ public class GameHub : Hub<IGameClient>
 
         await Clients.Group(update.RoomId).MessageReceived(update.Message);
 
-        if (update.Transition is not null)
+        if (update.StateUpdate is not null)
         {
-            await PublishRoomUpdate(update.Transition);
+            await PublishRoomUpdate(update.StateUpdate);
         }
+    }
+
+    public async Task PlayAgain()
+    {
+        RoomUpdate update;
+        try
+        {
+            update = _gameManager.PlayAgain(Context.ConnectionId);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+
+        await PublishRoomUpdate(update);
     }
 
     private async Task PublishRoomUpdate(RoomUpdate update)

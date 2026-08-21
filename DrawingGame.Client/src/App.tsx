@@ -208,6 +208,19 @@ function App() {
     }
   };
 
+  const playAgain = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await gameConnection.playAgain();
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const runDrawingCommand = useCallback((request: () => Promise<void>) => {
     void request().catch((reason: unknown) => {
       setError(getErrorMessage(reason));
@@ -267,6 +280,7 @@ function App() {
         onChooseWord={chooseWord}
         onEndStroke={endStroke}
         onLeaveRoom={leaveRoom}
+        onPlayAgain={playAgain}
         onSendMessage={sendMessage}
         onStartGame={startGame}
         onUndoStroke={undoStroke}

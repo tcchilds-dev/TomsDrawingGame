@@ -197,6 +197,19 @@ describe("GameConnection", () => {
     expect(hub.invoke).toHaveBeenCalledWith("StartGame");
   });
 
+  it("requests a rematch without sending client-owned room state", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+
+    await connection.playAgain();
+
+    expect(hub.invoke).toHaveBeenCalledWith("PlayAgain");
+  });
+
   it("requests private word choices for the current artist", async () => {
     const hub = new FakeHubConnection();
     hub.state = HubConnectionState.Connected;
