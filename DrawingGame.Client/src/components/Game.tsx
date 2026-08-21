@@ -153,15 +153,17 @@ export default function Game({
       </section>
 
       <section className="col-start-2 col-span-4 row-start-22 row-span-4">
-        <PaintSelection
-          brushWidth={brushWidth}
-          disabled={!isDrawingEnabled}
-          onBrushWidthChange={setBrushWidth}
-          onClear={onClearCanvas}
-          onColourChange={setSelectedColour}
-          onUndo={onUndoStroke}
-          selectedColour={selectedColour}
-        />
+        {isArtist && (
+          <PaintSelection
+            brushWidth={brushWidth}
+            disabled={!isDrawingEnabled}
+            onBrushWidthChange={setBrushWidth}
+            onClear={onClearCanvas}
+            onColourChange={setSelectedColour}
+            onUndo={onUndoStroke}
+            selectedColour={selectedColour}
+          />
+        )}
       </section>
 
       <aside className="col-start-6 row-start-1 content-center text-center">

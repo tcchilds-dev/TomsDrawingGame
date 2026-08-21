@@ -4,6 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import Word from "./Word";
 
 describe("Word", () => {
+  it("leaves the display blank when it is not in active use", () => {
+    const { container } = render(
+      <Word
+        artistName={null}
+        artistWord={null}
+        choices={[]}
+        displayWord={null}
+        isArtist={false}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        phase="Lobby"
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("lets the artist select one of their private choices", async () => {
     const user = userEvent.setup();
     const chooseWord = vi.fn(async () => undefined);

@@ -170,7 +170,7 @@ describe("Game", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("only enables drawing controls for the artist during play", () => {
+  it("only shows drawing controls for the artist", () => {
     const playingState: GameState = {
       ...gameState,
       phase: "Playing",
@@ -196,8 +196,8 @@ describe("Game", () => {
       "aria-disabled",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
 
     rerender(
       <Game
