@@ -220,6 +220,9 @@ describe("Game", () => {
     );
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
+    expect(
+      screen.getByRole("group", { name: "Paint colours" }),
+    ).toHaveClass("grid-cols-12");
   });
 
   it("submits trimmed chat messages outside a round", async () => {

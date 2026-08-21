@@ -291,7 +291,7 @@ export default function Canvas({
     <canvas
       aria-disabled={!isDrawingEnabled}
       aria-label="Drawing canvas"
-      className={`h-full w-full touch-none bg-base-100 ${
+      className={`h-full w-full touch-none rounded-box bg-base-100 shadow-sm ${
         isDrawingEnabled ? "cursor-crosshair" : "cursor-default"
       }`}
       onLostPointerCapture={(event) => finishStroke(event, false)}

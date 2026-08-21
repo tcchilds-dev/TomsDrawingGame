@@ -116,4 +116,24 @@ describe("Canvas", () => {
     expect(beginStroke).not.toHaveBeenCalled();
     expect(canvas).toHaveAttribute("aria-disabled", "true");
   });
+
+  it("uses subtle elevation without changing the canvas material", () => {
+    render(
+      <Canvas
+        brushWidth={8}
+        canvasState={emptyCanvasState}
+        colour="#111827"
+        isDrawingEnabled={false}
+        onAddStrokePoints={vi.fn()}
+        onBeginStroke={vi.fn()}
+        onEndStroke={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Drawing canvas")).toHaveClass(
+      "bg-base-100",
+      "rounded-box",
+      "shadow-sm",
+    );
+  });
 });

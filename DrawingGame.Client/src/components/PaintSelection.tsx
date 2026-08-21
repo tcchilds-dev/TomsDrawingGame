@@ -50,7 +50,11 @@ export default function PaintSelection({
     <div className="flex h-full items-center justify-center">
       <div className="card w-fit bg-base-100 shadow-sm">
         <div className="card-body flex-row items-center gap-5 px-5 py-2">
-          <div aria-label="Paint colours" className="grid grid-cols-8 gap-2" role="group">
+          <div
+            aria-label="Paint colours"
+            className="grid grid-cols-12 gap-2"
+            role="group"
+          >
             {paintColours.map((colour, index) => {
               const isSelected = selectedColour === colour;
 
