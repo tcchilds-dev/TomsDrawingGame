@@ -17,6 +17,12 @@ describe("Home", () => {
       />,
     );
 
+    expect(screen.getByLabelText("Room entry")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-2",
+    );
+
     await user.type(screen.getByPlaceholderText("input name"), "Alice");
     await user.click(screen.getByRole("button", { name: "Create Room" }));
 

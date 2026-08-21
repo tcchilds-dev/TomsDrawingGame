@@ -35,8 +35,24 @@ describe("Chat", () => {
     expect(screen.getByText("Bob guessed the word!").closest(".chat")).toHaveClass(
       "chat-start",
     );
+    expect(screen.getByText("Is it a castle?")).toHaveClass("chat-bubble");
+    expect(screen.getByText("Is it a castle?")).not.toHaveClass(
+      "bg-transparent",
+    );
     expect(screen.getByText("Bob guessed the word!")).toHaveClass(
+      "bg-transparent",
+      "p-0",
+      "text-primary",
+      "shadow-none",
+      "before:hidden",
+    );
+    expect(screen.getByText("Bob guessed the word!")).not.toHaveClass(
       "chat-bubble-primary",
+    );
+    expect(screen.getByLabelText("Chat messages")).toHaveClass(
+      "rounded-box",
+      "bg-white",
+      "shadow-sm",
     );
   });
 });

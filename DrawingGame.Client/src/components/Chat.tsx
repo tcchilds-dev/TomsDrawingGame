@@ -19,7 +19,7 @@ export default function Chat({ currentPlayerId, messages }: ChatProps) {
     <div
       aria-label="Chat messages"
       aria-live="polite"
-      className="h-full overflow-y-auto px-2"
+      className="h-full w-full overflow-y-auto rounded-box bg-white px-2 shadow-sm"
       ref={chatRef}
     >
       {messages.map((message, index) => {
@@ -28,7 +28,7 @@ export default function Chat({ currentPlayerId, messages }: ChatProps) {
         if (message.messageType === "CorrectGuess") {
           return (
             <div className="chat chat-start" key={key}>
-              <div className="chat-bubble chat-bubble-primary">
+              <div className="chat-bubble bg-transparent p-0 text-primary shadow-none before:hidden">
                 {message.username ?? "A player"} guessed the word!
               </div>
             </div>
@@ -43,14 +43,11 @@ export default function Chat({ currentPlayerId, messages }: ChatProps) {
           );
         }
 
-        const alignment =
-          message.playerId === currentPlayerId ? "chat-end" : "chat-start";
+        const alignment = message.playerId === currentPlayerId ? "chat-end" : "chat-start";
 
         return (
           <div className={`chat ${alignment}`} key={key}>
-            <div className="chat-header">
-              {message.username ?? "Unknown player"}
-            </div>
+            <div className="chat-header">{message.username ?? "Unknown player"}</div>
             <div className="chat-bubble">{message.message}</div>
           </div>
         );

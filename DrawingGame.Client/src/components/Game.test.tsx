@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { GameState } from "../game/types";
@@ -74,7 +74,9 @@ describe("Game", () => {
     await user.click(screen.getByRole("button", { name: "Leave" }));
 
     expect(leaveRoom).toHaveBeenCalledOnce();
-    expect(screen.getByLabelText("Room code")).toHaveTextContent(
+    expect(
+      screen.getByRole("button", { name: "Copy room code aBc12De" }),
+    ).toHaveTextContent(
       "Room Code: aBc12De",
     );
   });
@@ -123,6 +125,23 @@ describe("Game", () => {
     await user.click(screen.getByRole("button", { name: "Start Game" }));
 
     expect(startGame).toHaveBeenCalledOnce();
+    const roomControls = screen
+      .getByRole("button", { name: "Copy room code aBc12De" })
+      .closest("aside");
+    expect(roomControls).toHaveClass(
+      "row-start-22",
+      "row-span-4",
+      "flex-col",
+      "gap-1",
+    );
+    expect(
+      within(roomControls as HTMLElement)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Room Code: aBc12De", "Start Game", "Leave"]);
+    expect(
+      screen.getByRole("textbox", { name: "Chat message" }).closest("aside"),
+    ).toHaveClass("row-start-22", "row-span-2", "items-start");
   });
 
   it("asks non-owners to wait instead of showing the start action", () => {

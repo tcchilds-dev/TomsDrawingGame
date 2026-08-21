@@ -8,7 +8,7 @@ export default function Button({ disabled = false, onClick, type }: ButtonProps)
   if (type == "Leave") {
     return (
       <button
-        className="btn btn-soft btn-error w-full"
+        className="btn btn-secondary w-full"
         disabled={disabled}
         onClick={onClick}
         type="button"
@@ -19,14 +19,24 @@ export default function Button({ disabled = false, onClick, type }: ButtonProps)
   }
   if (type == "CreateRoom") {
     return (
-      <button className="btn btn-primary" disabled={disabled} onClick={onClick} type="button">
+      <button
+        className="btn btn-primary w-full"
+        disabled={disabled}
+        onClick={onClick}
+        type="button"
+      >
         Create Room
       </button>
     );
   }
   if (type == "JoinRoom") {
     return (
-      <button className="btn btn-secondary" disabled={disabled} onClick={onClick} type="button">
+      <button
+        className="btn btn-secondary w-full"
+        disabled={disabled}
+        onClick={onClick}
+        type="button"
+      >
         Join Room
       </button>
     );

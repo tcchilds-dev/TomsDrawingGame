@@ -19,11 +19,7 @@ type CanvasSize = {
 
 const EMPTY_CANVAS_SIZE: CanvasSize = { height: 1, width: 1 };
 
-function drawStroke(
-  context: CanvasRenderingContext2D,
-  stroke: Stroke,
-  canvasSize: CanvasSize,
-) {
+function drawStroke(context: CanvasRenderingContext2D, stroke: Stroke, canvasSize: CanvasSize) {
   const [firstPoint, ...remainingPoints] = stroke.points;
 
   if (!firstPoint) {
@@ -133,9 +129,7 @@ export default function Canvas({
     resizeCanvas();
 
     const resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(resizeCanvas);
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resizeCanvas);
 
     resizeObserver?.observe(canvas);
     window.addEventListener("resize", resizeCanvas);
@@ -216,10 +210,7 @@ export default function Canvas({
 
       const activeStroke = activeStrokeRef.current;
       if (activeStroke) {
-        completedStrokesRef.current = [
-          ...completedStrokesRef.current,
-          activeStroke,
-        ];
+        completedStrokesRef.current = [...completedStrokesRef.current, activeStroke];
       }
 
       activePointerIdRef.current = null;
@@ -258,10 +249,7 @@ export default function Canvas({
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (
-      !isDrawingEnabled ||
-      activePointerIdRef.current !== event.pointerId
-    ) {
+    if (!isDrawingEnabled || activePointerIdRef.current !== event.pointerId) {
       return;
     }
 
@@ -269,9 +257,7 @@ export default function Canvas({
 
     const coalescedEvents = event.nativeEvent.getCoalescedEvents?.();
     const pointerEvents =
-      coalescedEvents && coalescedEvents.length > 0
-        ? coalescedEvents
-        : [event.nativeEvent];
+      coalescedEvents && coalescedEvents.length > 0 ? coalescedEvents : [event.nativeEvent];
     const points: Point[] = [];
 
     for (const pointerEvent of pointerEvents) {
@@ -291,7 +277,7 @@ export default function Canvas({
     <canvas
       aria-disabled={!isDrawingEnabled}
       aria-label="Drawing canvas"
-      className={`h-full w-full touch-none rounded-box bg-base-100 shadow-sm ${
+      className={`h-full w-full touch-none rounded-box bg-white shadow-sm ${
         isDrawingEnabled ? "cursor-crosshair" : "cursor-default"
       }`}
       onLostPointerCapture={(event) => finishStroke(event, false)}

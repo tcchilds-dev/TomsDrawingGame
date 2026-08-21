@@ -37,9 +37,15 @@ describe("Results", () => {
       />,
     );
 
-    expect(screen.getByText("Winner")).toBeInTheDocument();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("240 points")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Results" })).toHaveClass(
+      "text-2xl",
+    );
+    expect(screen.getByText("Winner")).toHaveClass("text-success", "text-lg");
+    expect(screen.getByText("Alice")).toHaveClass("text-success", "text-2xl");
+    expect(screen.getByText("240 points")).toHaveClass("text-lg");
+    expect(screen.getByRole("button", { name: "Play Again" })).toHaveClass(
+      "text-lg",
+    );
 
     await user.click(screen.getByRole("button", { name: "Play Again" }));
 
@@ -56,12 +62,18 @@ describe("Results", () => {
       />,
     );
 
-    expect(screen.getByText("It's a draw!")).toBeInTheDocument();
-    expect(screen.getByText("Alice & Bob")).toBeInTheDocument();
+    expect(screen.getByText("It's a draw!")).toHaveClass(
+      "text-warning",
+      "text-lg",
+    );
+    expect(screen.getByText("Alice & Bob")).toHaveClass(
+      "text-warning",
+      "text-2xl",
+    );
     expect(screen.getByText("240 points each")).toBeInTheDocument();
     expect(
       screen.getByText("Waiting for the owner to play again"),
-    ).toBeInTheDocument();
+    ).toHaveClass("text-lg");
     expect(
       screen.queryByRole("button", { name: "Play Again" }),
     ).not.toBeInTheDocument();

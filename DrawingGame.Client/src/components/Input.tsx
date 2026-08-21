@@ -56,7 +56,7 @@ export default function Input({
   return (
     <input
       aria-label={ariaLabel}
-      className="input input-neutral focus:outline-none text-center"
+      className="input w-full bg-white text-center focus:input-primary focus:outline-none"
       disabled={disabled}
       maxLength={maxLength}
       onChange={onChange}

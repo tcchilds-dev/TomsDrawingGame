@@ -6,6 +6,7 @@ import Input from "./Input";
 import PaintSelection from "./PaintSelection";
 import PlayerList from "./PlayerList";
 import Results from "./Results";
+import RoomCodeButton from "./RoomCodeButton";
 import Timer from "./Timer";
 import Word from "./Word";
 import type { CanvasState, GameState, Point } from "../game/types";
@@ -94,7 +95,7 @@ export default function Game({
   };
 
   return (
-    <main className="grid h-screen grid-cols-6 grid-rows-24 gap-2 p-2">
+    <main className="grid h-screen grid-cols-6 grid-rows-25 gap-2 p-2">
       <aside className="col-start-1 row-start-1 text-center">
         {state.phase === "Results"
           ? "Results"
@@ -118,8 +119,8 @@ export default function Game({
           !isOwner && <p>Waiting for the owner to start</p>
         )}
       </aside>
-      <aside className="col-start-1 row-start-22 row-span-3 flex flex-col justify-center gap-2 text-center">
-        <p aria-label="Room code">Room Code: {state.roomId}</p>
+      <aside className="col-start-1 row-start-22 row-span-4 flex flex-col gap-1 text-center">
+        <RoomCodeButton roomCode={state.roomId} />
         {state.phase === "Lobby" && isOwner && (
           <Button
             disabled={isSubmitting}
@@ -191,8 +192,8 @@ export default function Game({
           messages={state.chatHistory}
         />
       </aside>
-      <aside className="col-start-6 row-start-23 row-span-4">
-        <form onSubmit={(event) => void submitMessage(event)}>
+      <aside className="col-start-6 row-start-22 row-span-2 flex items-start">
+        <form className="w-full" onSubmit={(event) => void submitMessage(event)}>
           <Input
             ariaLabel="Chat message"
             disabled={isChatRestricted || isSendingMessage}

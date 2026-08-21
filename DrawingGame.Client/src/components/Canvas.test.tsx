@@ -131,7 +131,7 @@ describe("Canvas", () => {
     );
 
     expect(screen.getByLabelText("Drawing canvas")).toHaveClass(
-      "bg-base-100",
+      "bg-white",
       "rounded-box",
       "shadow-sm",
     );
