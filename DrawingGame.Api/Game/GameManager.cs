@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using DrawingGame.Api.Game.Contracts;
 using DrawingGame.Api.Game.Contracts.Dtos;
 
 namespace DrawingGame.Api.Game;
@@ -396,6 +397,74 @@ public class GameManager
         room.State.ActiveStroke = null;
         room.State.CompletedStrokes.Clear();
         return (room.Id, CreateCanvasState(room));
+    }
+
+    public (string?, ChatMessageDto?) ProcessMessage(string connectionId, string message)
+    {
+        var trimmedMessage = message.Trim();
+
+        if (trimmedMessage.Length is < 1)
+        {
+            return (null, null);
+        }
+        else if (trimmedMessage.Length is > 200)
+        {
+            throw new GameException("Maximum allowed message size is 200 characters.");
+        }
+
+        var (room, player) = GetRoomMembership(connectionId);
+
+        if (player.Id == GetCurrentArtistId(room) && room.State.Phase == GamePhase.Playing)
+        {
+            return (null, null);
+        }
+
+        if (
+            room.State.CorrectAnswerPlayerIds.Contains(player.Id)
+            && room.State.Phase == GamePhase.Playing
+        )
+        {
+            return (null, null);
+        }
+
+        if (IsCorrectGuess(trimmedMessage, room))
+        {
+            var processedMessage = new ChatMessageDto(
+                player.Id,
+                player.UserName,
+                null,
+                DateTimeOffset.Now,
+                ChatMessageType.CorrectGuess
+            );
+
+            room.ChatHistory.Add(processedMessage);
+            room.State.CorrectAnswerPlayerIds.Add(player.Id);
+
+            return (room.Id, processedMessage);
+        }
+        else
+        {
+            var processedMessage = new ChatMessageDto(
+                player.Id,
+                player.UserName,
+                trimmedMessage,
+                DateTimeOffset.Now,
+                ChatMessageType.Chat
+            );
+
+            room.ChatHistory.Add(processedMessage);
+
+            return (room.Id, processedMessage);
+        }
+    }
+
+    private static bool IsCorrectGuess(string message, GameRoom room)
+    {
+        if (room.State.CurrentWord is null || room.State.Phase != GamePhase.Playing)
+        {
+            return false;
+        }
+        return string.Equals(message, room.State.CurrentWord, StringComparison.OrdinalIgnoreCase);
     }
 
     public RoomUpdate? RemoveDisconnectedPlayer(string connectionId)

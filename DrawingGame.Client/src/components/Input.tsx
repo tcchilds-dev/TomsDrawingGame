@@ -1,16 +1,20 @@
 import { useEffect, useRef } from "react";
 
 type InputProps = {
+  ariaLabel?: string;
   disabled?: boolean;
   focusOnTyping?: boolean;
+  maxLength?: number;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   placeholder: string;
   value?: string;
 };
 
 export default function Input({
+  ariaLabel,
   disabled = false,
   focusOnTyping = true,
+  maxLength,
   onChange,
   placeholder,
   value,
@@ -51,8 +55,10 @@ export default function Input({
 
   return (
     <input
+      aria-label={ariaLabel}
       className="input input-neutral focus:outline-none text-center"
       disabled={disabled}
+      maxLength={maxLength}
       onChange={onChange}
       placeholder={placeholder}
       ref={inputRef}

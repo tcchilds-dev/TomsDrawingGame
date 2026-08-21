@@ -3,6 +3,7 @@ import Game from "./components/Game";
 import Home from "./components/Home";
 import { GameConnection } from "./game/GameConnection";
 import { applyCanvasUpdate, emptyCanvasState } from "./game/canvasState";
+import { applyReceivedMessage } from "./game/chatState";
 import type { CanvasState, GameState, Point, RoomEntry } from "./game/types";
 
 function App() {
@@ -23,6 +24,13 @@ function App() {
     const stopListeningForCanvas = gameConnection.onCanvasUpdated((update) => {
       setCanvasState((state) => applyCanvasUpdate(state, update));
     });
+    const stopListeningForMessages = gameConnection.onMessageReceived(
+      (message) => {
+        setGameState((state) =>
+          state ? applyReceivedMessage(state, message) : state,
+        );
+      },
+    );
     const stopListeningForExpiry = gameConnection.onSessionExpired((reason) => {
       setGameState(null);
       setCanvasState(emptyCanvasState);
@@ -52,6 +60,7 @@ function App() {
       isActive = false;
       stopListeningForState();
       stopListeningForCanvas();
+      stopListeningForMessages();
       stopListeningForExpiry();
     };
   }, [gameConnection]);
@@ -223,6 +232,17 @@ function App() {
     runDrawingCommand(() => gameConnection.clearCanvas());
   }, [gameConnection, runDrawingCommand]);
 
+  const sendMessage = async (message: string) => {
+    setError(null);
+
+    try {
+      await gameConnection.sendMessage(message);
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+      throw reason;
+    }
+  };
+
   if (gameState) {
     return (
       <Game
@@ -237,6 +257,7 @@ function App() {
         onChooseWord={chooseWord}
         onEndStroke={endStroke}
         onLeaveRoom={leaveRoom}
+        onSendMessage={sendMessage}
         onStartGame={startGame}
         onUndoStroke={undoStroke}
         state={gameState}

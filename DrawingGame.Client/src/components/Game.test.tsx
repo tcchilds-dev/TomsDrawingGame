@@ -27,6 +27,7 @@ const drawingProps = {
   onBeginStroke: vi.fn(),
   onClearCanvas: vi.fn(),
   onEndStroke: vi.fn(),
+  onSendMessage: vi.fn(async () => undefined),
   onUndoStroke: vi.fn(),
 };
 
@@ -219,5 +220,119 @@ describe("Game", () => {
     );
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
+  });
+
+  it("submits trimmed chat messages outside a round", async () => {
+    const user = userEvent.setup();
+    const sendMessage = vi.fn(async () => undefined);
+
+    render(
+      <Game
+        {...drawingProps}
+        artistWord={null}
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onSendMessage={sendMessage}
+        onStartGame={vi.fn()}
+        state={gameState}
+        wordChoices={[]}
+      />,
+    );
+
+    const input = screen.getByRole("textbox", { name: "Chat message" });
+    await user.type(input, "  Hello everyone  {Enter}");
+
+    expect(sendMessage).toHaveBeenCalledWith("Hello everyone");
+    expect(input).toHaveValue("");
+  });
+
+  it("restricts the artist and successful guessers during play", () => {
+    const players = [
+      {
+        id: "player-1",
+        username: "Alice",
+        score: 0,
+        isOwner: true,
+        isArtist: true,
+        hasCorrectlyGuessed: false,
+      },
+      {
+        id: "player-2",
+        username: "Bob",
+        score: 0,
+        isOwner: false,
+        isArtist: false,
+        hasCorrectlyGuessed: true,
+      },
+      {
+        id: "player-3",
+        username: "Carol",
+        score: 0,
+        isOwner: false,
+        isArtist: false,
+        hasCorrectlyGuessed: false,
+      },
+    ];
+    const playingState: GameState = {
+      ...gameState,
+      phase: "Playing",
+      currentArtistId: "player-1",
+      players,
+    };
+
+    const { rerender } = render(
+      <Game
+        {...drawingProps}
+        artistWord="Castle"
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={playingState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Chat message" })).toBeDisabled();
+    expect(screen.getByPlaceholderText("You're drawing")).toBeDisabled();
+
+    rerender(
+      <Game
+        {...drawingProps}
+        artistWord={null}
+        currentPlayerId="player-2"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={playingState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("You guessed the word")).toBeDisabled();
+
+    rerender(
+      <Game
+        {...drawingProps}
+        artistWord={null}
+        currentPlayerId="player-3"
+        error={null}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={playingState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("Type a guess")).toBeEnabled();
   });
 });

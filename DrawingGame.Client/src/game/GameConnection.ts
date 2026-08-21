@@ -7,6 +7,7 @@ import { RoomSessionStore } from "./RoomSessionStore";
 import type {
   CanvasState,
   CanvasUpdate,
+  ChatMessage,
   GameState,
   Point,
   RoomEntry,
@@ -15,6 +16,7 @@ import type {
 
 type GameStateListener = (state: GameState) => void;
 type CanvasUpdateListener = (update: CanvasUpdate) => void;
+type MessageReceivedListener = (message: ChatMessage) => void;
 type SessionExpiredListener = (error: unknown) => void;
 type HubEventHandler = (...args: unknown[]) => void;
 
@@ -36,6 +38,7 @@ export class GameConnection {
   private readonly connection: GameHubConnection;
   private readonly canvasUpdateListeners = new Set<CanvasUpdateListener>();
   private readonly gameStateListeners = new Set<GameStateListener>();
+  private readonly messageReceivedListeners = new Set<MessageReceivedListener>();
   private readonly roomSessionStore: RoomSessionStore;
   private readonly sessionExpiredListeners = new Set<SessionExpiredListener>();
   private startPromise: Promise<void> | null = null;
@@ -69,6 +72,9 @@ export class GameConnection {
     });
     this.connection.on("StrokeEnded", () => {
       this.publishCanvasUpdate({ type: "strokeEnded" });
+    });
+    this.connection.on("MessageReceived", (message) => {
+      this.publishMessageReceived(message as ChatMessage);
     });
     this.connection.onreconnected(async () => {
       try {
@@ -164,6 +170,11 @@ export class GameConnection {
     await this.connection.send("ClearCanvas");
   }
 
+  async sendMessage(message: string) {
+    await this.start();
+    await this.connection.invoke("SendMessage", message);
+  }
+
   async rejoinRoom(): Promise<RoomEntry | null> {
     const session = this.roomSessionStore.load();
     if (!session) {
@@ -190,6 +201,11 @@ export class GameConnection {
     return () => this.canvasUpdateListeners.delete(listener);
   }
 
+  onMessageReceived(listener: MessageReceivedListener) {
+    this.messageReceivedListeners.add(listener);
+    return () => this.messageReceivedListeners.delete(listener);
+  }
+
   onSessionExpired(listener: SessionExpiredListener) {
     this.sessionExpiredListeners.add(listener);
     return () => this.sessionExpiredListeners.delete(listener);
@@ -211,6 +227,12 @@ export class GameConnection {
   private publishCanvasUpdate(update: CanvasUpdate) {
     for (const listener of this.canvasUpdateListeners) {
       listener(update);
+    }
+  }
+
+  private publishMessageReceived(message: ChatMessage) {
+    for (const listener of this.messageReceivedListeners) {
+      listener(message);
     }
   }
 

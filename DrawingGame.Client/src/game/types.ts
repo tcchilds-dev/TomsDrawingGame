@@ -12,7 +12,7 @@ export type ChatMessageType = "Chat" | "CorrectGuess" | "System";
 export type ChatMessage = {
   playerId: string | null;
   username: string | null;
-  message: string;
+  message: string | null;
   timeStamp: string;
   messageType: ChatMessageType;
 };

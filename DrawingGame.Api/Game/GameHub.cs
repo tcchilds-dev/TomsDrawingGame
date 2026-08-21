@@ -205,6 +205,18 @@ public class GameHub : Hub<IGameClient>
         }
     }
 
+    public async Task SendMessage(string message)
+    {
+        var (roomId, processedMessage) = _gameManager.ProcessMessage(Context.ConnectionId, message);
+
+        if (roomId is null || processedMessage is null)
+        {
+            return;
+        }
+
+        await Clients.Group(roomId).MessageReceived(processedMessage);
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         _disconnectCleanup.ScheduleRemoval(Context.ConnectionId);

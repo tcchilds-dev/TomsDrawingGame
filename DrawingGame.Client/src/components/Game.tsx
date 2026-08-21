@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Button from "./Button";
 import Canvas from "./Canvas";
 import Chat from "./Chat";
@@ -21,6 +21,7 @@ type GameProps = {
   onChooseWord: (word: string) => Promise<void> | void;
   onEndStroke: () => void;
   onLeaveRoom: () => Promise<void> | void;
+  onSendMessage: (message: string) => Promise<void> | void;
   onStartGame: () => Promise<void> | void;
   onUndoStroke: () => void;
   state: GameState;
@@ -39,6 +40,7 @@ export default function Game({
   onChooseWord,
   onEndStroke,
   onLeaveRoom,
+  onSendMessage,
   onStartGame,
   onUndoStroke,
   state,
@@ -46,12 +48,47 @@ export default function Game({
 }: GameProps) {
   const [selectedColour, setSelectedColour] = useState("#111827");
   const [brushWidth, setBrushWidth] = useState(8);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const isOwner = currentPlayerId === state.ownerId;
   const isArtist = currentPlayerId === state.currentArtistId;
   const isDrawingEnabled = isArtist && state.phase === "Playing";
+  const currentPlayer = state.players.find(
+    (player) => player.id === currentPlayerId,
+  );
+  const isChatRestricted =
+    state.phase === "Playing" &&
+    (isArtist || currentPlayer?.hasCorrectlyGuessed === true);
+  const chatPlaceholder =
+    state.phase !== "Playing"
+      ? "Type a message"
+      : isArtist
+        ? "You're drawing"
+        : currentPlayer?.hasCorrectlyGuessed
+          ? "You guessed the word"
+          : "Type a guess";
   const artistName = state.players.find(
     (player) => player.id === state.currentArtistId,
   )?.username;
+
+  const submitMessage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const message = draftMessage.trim();
+
+    if (!message || isChatRestricted || isSendingMessage) {
+      return;
+    }
+
+    setIsSendingMessage(true);
+    try {
+      await onSendMessage(message);
+      setDraftMessage("");
+    } catch {
+      // The parent displays transport and server errors in the notice board.
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   return (
     <main className="grid h-screen grid-cols-6 grid-rows-24 gap-2 p-2">
@@ -130,11 +167,23 @@ export default function Game({
       <aside className="col-start-6 row-start-1 content-center text-center">
         <Timer />
       </aside>
-      <aside className="col-start-6 row-start-2 row-span-20">
-        <Chat></Chat>
+      <aside className="col-start-6 row-start-2 row-span-20 min-h-0">
+        <Chat
+          currentPlayerId={currentPlayerId}
+          messages={state.chatHistory}
+        />
       </aside>
       <aside className="col-start-6 row-start-23 row-span-4">
-        <Input placeholder="" />
+        <form onSubmit={(event) => void submitMessage(event)}>
+          <Input
+            ariaLabel="Chat message"
+            disabled={isChatRestricted || isSendingMessage}
+            maxLength={200}
+            onChange={(event) => setDraftMessage(event.target.value)}
+            placeholder={chatPlaceholder}
+            value={draftMessage}
+          />
+        </form>
       </aside>
     </main>
   );

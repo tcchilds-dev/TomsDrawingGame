@@ -1,7 +1,13 @@
 import { HubConnectionState } from "@microsoft/signalr";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameConnection } from "./GameConnection";
-import type { CanvasState, GameState, RoomEntry, Stroke } from "./types";
+import type {
+  CanvasState,
+  ChatMessage,
+  GameState,
+  RoomEntry,
+  Stroke,
+} from "./types";
 
 type HubEventHandler = (...args: unknown[]) => void;
 
@@ -309,5 +315,29 @@ describe("GameConnection", () => {
     expect(hub.send).toHaveBeenNthCalledWith(3, "EndStroke");
     expect(hub.send).toHaveBeenNthCalledWith(4, "UndoStroke");
     expect(hub.send).toHaveBeenNthCalledWith(5, "ClearCanvas");
+  });
+
+  it("publishes received messages and invokes the chat command", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    const messageReceived = vi.fn();
+    connection.onMessageReceived(messageReceived);
+    const message: ChatMessage = {
+      playerId: "player-2",
+      username: "Bob",
+      message: "Hello",
+      timeStamp: "2026-08-21T12:00:00Z",
+      messageType: "Chat",
+    };
+
+    hub.emit("MessageReceived", message);
+    await connection.sendMessage("Hello");
+
+    expect(messageReceived).toHaveBeenCalledWith(message);
+    expect(hub.invoke).toHaveBeenCalledWith("SendMessage", "Hello");
   });
 });

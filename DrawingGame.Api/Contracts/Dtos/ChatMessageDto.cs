@@ -13,7 +13,7 @@ public enum ChatMessageType
 public sealed record ChatMessageDto(
     string? PlayerId,
     string? Username,
-    string Message,
+    string? Message,
     DateTimeOffset TimeStamp,
     ChatMessageType MessageType
 );

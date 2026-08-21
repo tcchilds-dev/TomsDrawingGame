@@ -9,4 +9,5 @@ public interface IGameClient
     Task StrokePointsAdded(Point[] points);
     Task StrokeEnded();
     Task SyncCanvas(CanvasStateDto state);
+    Task MessageReceived(ChatMessageDto message);
 }
