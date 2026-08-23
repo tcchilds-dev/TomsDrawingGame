@@ -28,7 +28,7 @@ export default function Chat({ currentPlayerId, messages }: ChatProps) {
         if (message.messageType === "CorrectGuess") {
           return (
             <div className="chat chat-start" key={key}>
-              <div className="chat-bubble bg-transparent p-0 text-primary shadow-none before:hidden">
+              <div className="chat-bubble bg-transparent p-0 text-success shadow-none before:hidden">
                 {message.username ?? "A player"} guessed the word!
               </div>
             </div>

@@ -16,7 +16,7 @@ public class GameManager
 
     private readonly string[] _allowedColours =
     [
-        "#000000",
+        "#111827",
         "#7a7d82",
         "#ee1a13",
         "#ff7000",

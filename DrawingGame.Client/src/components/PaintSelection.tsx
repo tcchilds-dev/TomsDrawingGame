@@ -1,7 +1,7 @@
 import WidthSelection from "./WidthSelection";
 
 const paintColours = [
-  "#000000",
+  "#111827",
   "#7a7d82",
   "#ee1a13",
   "#ff7000",
