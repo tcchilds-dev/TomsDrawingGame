@@ -8,6 +8,7 @@ import type {
   CanvasState,
   CanvasUpdate,
   ChatMessage,
+  GameConfigUpdate,
   GameState,
   Point,
   RoomEntry,
@@ -123,6 +124,11 @@ export class GameConnection {
   async startGame(): Promise<void> {
     await this.start();
     await this.connection.invoke("StartGame");
+  }
+
+  async updateGameConfig(config: GameConfigUpdate): Promise<void> {
+    await this.start();
+    await this.connection.invoke("UpdateGameConfig", config);
   }
 
   async playAgain(): Promise<void> {

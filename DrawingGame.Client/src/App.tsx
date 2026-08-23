@@ -4,7 +4,13 @@ import Home from "./components/Home";
 import { GameConnection } from "./game/GameConnection";
 import { applyCanvasUpdate, emptyCanvasState } from "./game/canvasState";
 import { applyReceivedMessage } from "./game/chatState";
-import type { CanvasState, GameState, Point, RoomEntry } from "./game/types";
+import type {
+  CanvasState,
+  GameConfigUpdate,
+  GameState,
+  Point,
+  RoomEntry,
+} from "./game/types";
 
 function App() {
   const [gameConnection] = useState(() => new GameConnection());
@@ -16,6 +22,7 @@ function App() {
   const [artistWord, setArtistWord] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingGameConfig, setIsUpdatingGameConfig] = useState(false);
   const initialRoomPromise = useRef<Promise<RoomEntry | null> | null>(null);
   const currentPhaseRef = useRef<GameState["phase"] | null>(null);
   const applyGameState = useCallback((state: GameState | null) => {
@@ -195,6 +202,23 @@ function App() {
     }
   };
 
+  const updateGameConfig = useCallback(
+    async (config: GameConfigUpdate) => {
+      setError(null);
+      setIsUpdatingGameConfig(true);
+
+      try {
+        await gameConnection.updateGameConfig(config);
+      } catch (reason) {
+        setError(getErrorMessage(reason));
+        throw reason;
+      } finally {
+        setIsUpdatingGameConfig(false);
+      }
+    },
+    [gameConnection],
+  );
+
   const chooseWord = async (word: string) => {
     setError(null);
     setIsSubmitting(true);
@@ -274,6 +298,7 @@ function App() {
         currentPlayerId={playerId}
         error={error}
         isSubmitting={isSubmitting}
+        isUpdatingGameConfig={isUpdatingGameConfig}
         onAddStrokePoints={addStrokePoints}
         onBeginStroke={beginStroke}
         onClearCanvas={clearCanvas}
@@ -284,6 +309,7 @@ function App() {
         onSendMessage={sendMessage}
         onStartGame={startGame}
         onUndoStroke={undoStroke}
+        onUpdateGameConfig={updateGameConfig}
         state={gameState}
         wordChoices={wordChoices}
       />

@@ -1,6 +1,6 @@
 using DrawingGame.Api.Game;
 using DrawingGame.Api.Game.Contracts;
-using DrawingGame.Api.Game.Contracts.Dtos;
+using static DrawingGame.Tests.GameManagerTestHelper;
 
 namespace DrawingGame.Tests;
 
@@ -25,7 +25,7 @@ public class GameManagerChatTests
     [Fact]
     public void ProcessMessage_RecordsAndConcealsCorrectGuess()
     {
-        var game = StartTestGame();
+        var game = StartPlayingGame();
 
         var update = Assert.IsType<MessageUpdate>(
             game.Manager.ProcessMessage(
@@ -56,7 +56,7 @@ public class GameManagerChatTests
     [Fact]
     public void ProcessMessage_RejectsArtistDuringPlayingPhase()
     {
-        var game = StartTestGame();
+        var game = StartPlayingGame();
 
         var result = game.Manager.ProcessMessage(game.ArtistConnectionId, "A helpful hint");
 
@@ -76,51 +76,4 @@ public class GameManagerChatTests
         Assert.Equal("Maximum allowed message size is 200 characters.", exception.Message);
     }
 
-    private static TestGame StartTestGame()
-    {
-        var manager = CreateManager();
-        var owner = manager.CreateRoom("owner-connection", "Alice");
-        var guesser = manager.JoinRoom("guesser-connection", "Bob", owner.Session.RoomId);
-        var thirdPlayer = manager.JoinRoom("third-connection", "Carol", owner.Session.RoomId);
-
-        var state = manager.StartGame("owner-connection");
-        var players = new[]
-        {
-            (ConnectionId: "owner-connection", Entry: owner),
-            (ConnectionId: "guesser-connection", Entry: guesser),
-            (ConnectionId: "third-connection", Entry: thirdPlayer),
-        };
-        var artist = players.Single(player =>
-            player.Entry.Session.PlayerId == state.CurrentArtistId
-        );
-        var guessingPlayer = players.First(player =>
-            player.Entry.Session.PlayerId != state.CurrentArtistId
-        );
-        var artistConnectionId = artist.ConnectionId;
-        var guesserConnectionId = guessingPlayer.ConnectionId;
-        var word = manager.GetWordChoices(artistConnectionId)[0];
-        manager.ChooseWord(artistConnectionId, word);
-
-        return new TestGame(
-            manager,
-            guessingPlayer.Entry,
-            artistConnectionId,
-            guesserConnectionId,
-            word
-        );
-    }
-
-    private static GameManager CreateManager()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "test-word-list.txt");
-        return new GameManager(new WordList(path), TimeProvider.System);
-    }
-
-    private sealed record TestGame(
-        GameManager Manager,
-        RoomEntryDto Guesser,
-        string ArtistConnectionId,
-        string GuesserConnectionId,
-        string Word
-    );
 }

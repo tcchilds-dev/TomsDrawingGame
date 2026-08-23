@@ -197,6 +197,25 @@ describe("GameConnection", () => {
     expect(hub.invoke).toHaveBeenCalledWith("StartGame");
   });
 
+  it("updates only the configurable room settings", async () => {
+    const hub = new FakeHubConnection();
+    hub.state = HubConnectionState.Connected;
+    const connection = new GameConnection({
+      connection: hub,
+      storage: sessionStorage,
+    });
+    const config = {
+      wordSelectionSize: 5,
+      wordChoiceTimerSeconds: 20,
+      drawTimerSeconds: 90,
+      numberOfRounds: 4,
+    };
+
+    await connection.updateGameConfig(config);
+
+    expect(hub.invoke).toHaveBeenCalledWith("UpdateGameConfig", config);
+  });
+
   it("requests a rematch without sending client-owned room state", async () => {
     const hub = new FakeHubConnection();
     hub.state = HubConnectionState.Connected;

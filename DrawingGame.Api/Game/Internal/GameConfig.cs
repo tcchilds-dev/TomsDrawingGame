@@ -3,8 +3,8 @@ namespace DrawingGame.Api.Game;
 public sealed class GameConfig
 {
     public int MaxPlayers { get; init; } = 6;
-    public int WordSelectionSize { get; init; } = 3;
-    public int WordChoiceTimerSeconds { get; init; } = 30;
-    public int DrawTimerSeconds { get; init; } = 80;
-    public int NumberOfRounds { get; init; } = 3;
+    public int WordSelectionSize { get; set; } = 3;
+    public int WordChoiceTimerSeconds { get; set; } = 30;
+    public int DrawTimerSeconds { get; set; } = 80;
+    public int NumberOfRounds { get; set; } = 3;
 }

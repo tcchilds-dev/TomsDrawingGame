@@ -23,6 +23,7 @@ vi.mock("./Canvas", () => {
 
 const drawingProps = {
   canvasState: { completedStrokes: [], activeStroke: null },
+  isUpdatingGameConfig: false,
   onAddStrokePoints: vi.fn(),
   onBeginStroke: vi.fn(),
   onClearCanvas: vi.fn(),
@@ -30,6 +31,7 @@ const drawingProps = {
   onPlayAgain: vi.fn(),
   onSendMessage: vi.fn(async () => undefined),
   onUndoStroke: vi.fn(),
+  onUpdateGameConfig: vi.fn(async () => undefined),
 };
 
 const gameState: GameState = {
@@ -125,6 +127,10 @@ describe("Game", () => {
     await user.click(screen.getByRole("button", { name: "Start Game" }));
 
     expect(startGame).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole("heading", { name: "Game Settings" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Drawing canvas")).not.toBeInTheDocument();
     const roomControls = screen
       .getByRole("button", { name: "Copy room code aBc12De" })
       .closest("aside");
@@ -168,6 +174,26 @@ describe("Game", () => {
     );
   });
 
+  it("waits for settings to synchronize before the owner can start", () => {
+    render(
+      <Game
+        {...drawingProps}
+        artistWord={null}
+        currentPlayerId="player-1"
+        error={null}
+        isSubmitting={false}
+        isUpdatingGameConfig
+        onChooseWord={vi.fn()}
+        onLeaveRoom={vi.fn()}
+        onStartGame={vi.fn()}
+        state={gameState}
+        wordChoices={[]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Start Game" })).toBeDisabled();
+  });
+
   it("uses the synchronized round and hides lobby controls after starting", () => {
     render(
       <Game
@@ -185,6 +211,10 @@ describe("Game", () => {
     );
 
     expect(screen.getByText("Round: 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Drawing canvas")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Game Settings" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Start Game" }),
     ).not.toBeInTheDocument();

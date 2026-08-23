@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import Button from "./Button";
 import Canvas from "./Canvas";
 import Chat from "./Chat";
+import GameSettings from "./GameSettings";
 import Input from "./Input";
 import PaintSelection from "./PaintSelection";
 import PlayerList from "./PlayerList";
@@ -9,7 +10,12 @@ import Results from "./Results";
 import RoomCodeButton from "./RoomCodeButton";
 import Timer from "./Timer";
 import Word from "./Word";
-import type { CanvasState, GameState, Point } from "../game/types";
+import type {
+  CanvasState,
+  GameConfigUpdate,
+  GameState,
+  Point,
+} from "../game/types";
 
 type GameProps = {
   artistWord: string | null;
@@ -17,6 +23,7 @@ type GameProps = {
   currentPlayerId: string | null;
   error: string | null;
   isSubmitting: boolean;
+  isUpdatingGameConfig: boolean;
   onAddStrokePoints: (points: Point[]) => void;
   onBeginStroke: (colour: string, width: number, firstPoint: Point) => void;
   onClearCanvas: () => void;
@@ -27,6 +34,7 @@ type GameProps = {
   onSendMessage: (message: string) => Promise<void> | void;
   onStartGame: () => Promise<void> | void;
   onUndoStroke: () => void;
+  onUpdateGameConfig: (config: GameConfigUpdate) => Promise<void> | void;
   state: GameState;
   wordChoices: string[];
 };
@@ -37,6 +45,7 @@ export default function Game({
   currentPlayerId,
   error,
   isSubmitting,
+  isUpdatingGameConfig,
   onAddStrokePoints,
   onBeginStroke,
   onClearCanvas,
@@ -47,6 +56,7 @@ export default function Game({
   onSendMessage,
   onStartGame,
   onUndoStroke,
+  onUpdateGameConfig,
   state,
   wordChoices,
 }: GameProps) {
@@ -115,7 +125,11 @@ export default function Game({
       </aside>
       <aside className="col-start-1 row-start-22 row-span-4 flex flex-col gap-1 text-center">
         {state.phase === "Lobby" && isOwner && (
-          <Button disabled={isSubmitting} onClick={() => void onStartGame()} type="Start" />
+          <Button
+            disabled={isSubmitting || isUpdatingGameConfig}
+            onClick={() => void onStartGame()}
+            type="Start"
+          />
         )}
         <RoomCodeButton roomCode={state.roomId} />
         <Button disabled={isSubmitting} onClick={() => void onLeaveRoom()} type="Leave" />
@@ -141,6 +155,13 @@ export default function Game({
             isSubmitting={isSubmitting}
             onPlayAgain={onPlayAgain}
             players={state.players}
+          />
+        ) : state.phase === "Lobby" ? (
+          <GameSettings
+            config={state.config}
+            disabled={isSubmitting}
+            isOwner={isOwner}
+            onUpdate={onUpdateGameConfig}
           />
         ) : (
           <Canvas

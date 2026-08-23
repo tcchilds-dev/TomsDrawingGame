@@ -180,6 +180,47 @@ public class GameManager
         }
     }
 
+    public GameStateDto UpdateGameConfig(string connectionId, ConfigUpdateDto config)
+    {
+        if (config.WordSelectionSize is not 3 and not 5)
+        {
+            throw new GameException("Number of word choices must be 3 or 5.");
+        }
+        if (config.WordChoiceTimerSeconds is < 10 or > 30)
+        {
+            throw new GameException("Word choice timer can only be 10-30 seconds.");
+        }
+        if (config.DrawTimerSeconds is < 30 or > 120)
+        {
+            throw new GameException("Draw timer can only be 30-120 seconds.");
+        }
+        if (config.NumberOfRounds is < 1 or > 10)
+        {
+            throw new GameException("Number of rounds must be 1-10.");
+        }
+
+        var (room, player) = GetRoomMembership(connectionId);
+
+        lock (room.Lock)
+        {
+            if (room.OwnerId != player.Id)
+            {
+                throw new GameException("Only the owner of the room may update game settings.");
+            }
+            if (room.State.Phase != GamePhase.Lobby)
+            {
+                throw new GameException("Game settings can only be updated in the Lobby.");
+            }
+
+            room.Config.WordSelectionSize = config.WordSelectionSize;
+            room.Config.WordChoiceTimerSeconds = config.WordChoiceTimerSeconds;
+            room.Config.DrawTimerSeconds = config.DrawTimerSeconds;
+            room.Config.NumberOfRounds = config.NumberOfRounds;
+
+            return CreateState(room);
+        }
+    }
+
     public GameStateDto StartGame(string connectionId)
     {
         var (room, player) = GetRoomMembership(connectionId);

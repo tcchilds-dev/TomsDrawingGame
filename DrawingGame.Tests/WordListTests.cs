@@ -1,4 +1,5 @@
 ﻿using DrawingGame.Api.Game;
+using static DrawingGame.Tests.GameManagerTestHelper;
 
 namespace DrawingGame.Tests;
 
@@ -7,8 +8,7 @@ public class WordListTests
     [Fact]
     public void GetChoices_ReturnsDistinctNonEmptyWords()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "test-word-list.txt");
-        var wordList = new WordList(path);
+        var wordList = new WordList(GetWordListPath());
 
         var result = wordList.GetChoices(5);
 

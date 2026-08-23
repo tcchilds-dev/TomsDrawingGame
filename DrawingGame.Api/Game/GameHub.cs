@@ -147,6 +147,21 @@ public class GameHub : Hub<IGameClient>
         await PublishRoomUpdate(update);
     }
 
+    public async Task UpdateGameConfig(ConfigUpdateDto config)
+    {
+        GameStateDto state;
+        try
+        {
+            state = _gameManager.UpdateGameConfig(Context.ConnectionId, config);
+        }
+        catch (GameException exception)
+        {
+            throw new HubException(exception.Message);
+        }
+
+        await Clients.Group(state.RoomId).SyncGameState(state);
+    }
+
     public async Task StartGame()
     {
         GameStateDto state;

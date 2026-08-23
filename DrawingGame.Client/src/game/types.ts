@@ -25,6 +25,14 @@ export type GameConfig = {
   numberOfRounds: number;
 };
 
+export type GameConfigUpdate = Pick<
+  GameConfig,
+  | "wordSelectionSize"
+  | "wordChoiceTimerSeconds"
+  | "drawTimerSeconds"
+  | "numberOfRounds"
+>;
+
 export type GamePhase = "Lobby" | "WordChoice" | "Playing" | "Results";
 
 export type GameState = {

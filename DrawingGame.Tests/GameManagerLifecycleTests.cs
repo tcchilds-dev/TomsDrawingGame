@@ -1,5 +1,6 @@
 using DrawingGame.Api.Game;
 using DrawingGame.Api.Game.Contracts.Dtos;
+using static DrawingGame.Tests.GameManagerTestHelper;
 
 namespace DrawingGame.Tests;
 
@@ -295,81 +296,4 @@ public class GameManagerLifecycleTests
         Assert.Equal("Only the owner may play again.", ownerException.Message);
     }
 
-    private static TestGame CreateGame(int playerCount)
-    {
-        var clock = new ManualTimeProvider(
-            new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero)
-        );
-        var path = Path.Combine(AppContext.BaseDirectory, "test-word-list.txt");
-        var manager = new GameManager(new WordList(path), clock);
-        var owner = manager.CreateRoom("connection-1", "Player 1");
-        var players = new List<TestPlayer> { new("connection-1", owner.Session.PlayerId) };
-
-        for (var index = 2; index <= playerCount; index++)
-        {
-            var connectionId = $"connection-{index}";
-            var entry = manager.JoinRoom(connectionId, $"Player {index}", owner.Session.RoomId);
-            players.Add(new TestPlayer(connectionId, entry.Session.PlayerId));
-        }
-
-        return new TestGame(manager, clock, "connection-1", players);
-    }
-
-    private static GameStateDto AdvanceToResults(TestGame game)
-    {
-        var state = game.Manager.StartGame(game.OwnerConnectionId);
-        var turnCount = state.Config.NumberOfRounds * state.Players.Count;
-
-        for (var turn = 0; turn < turnCount; turn++)
-        {
-            game.Clock.Advance(TimeSpan.FromSeconds(state.Config.WordChoiceTimerSeconds));
-            state = Assert.IsType<GameStateDto>(
-                Assert.Single(game.Manager.AdvanceExpiredPhases()).State
-            );
-
-            game.Clock.Advance(TimeSpan.FromSeconds(state.Config.DrawTimerSeconds));
-            state = Assert.IsType<GameStateDto>(
-                Assert.Single(game.Manager.AdvanceExpiredPhases()).State
-            );
-        }
-
-        Assert.Equal(GamePhase.Results, state.Phase);
-        return state;
-    }
-
-    private static string GetConnectionId(TestGame game, string? playerId)
-    {
-        return game.Players.Single(player => player.PlayerId == playerId).ConnectionId;
-    }
-
-    private static int GetScore(GameStateDto state, string playerId)
-    {
-        return state.Players.Single(player => player.Id == playerId).Score;
-    }
-
-    private static string MaskWord(string word)
-    {
-        return string.Concat(word.Select(character => char.IsLetter(character) ? '_' : character));
-    }
-
-    private sealed record TestGame(
-        GameManager Manager,
-        ManualTimeProvider Clock,
-        string OwnerConnectionId,
-        IReadOnlyList<TestPlayer> Players
-    );
-
-    private sealed record TestPlayer(string ConnectionId, string PlayerId);
-
-    private sealed class ManualTimeProvider(DateTimeOffset utcNow) : TimeProvider
-    {
-        private DateTimeOffset UtcNow { get; set; } = utcNow;
-
-        public override DateTimeOffset GetUtcNow() => UtcNow;
-
-        public void Advance(TimeSpan duration)
-        {
-            UtcNow += duration;
-        }
-    }
 }
