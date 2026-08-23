@@ -7,5 +7,3 @@ artifacts/
 *.nupkg
 *.snupkg
 packages/
-
-plan.md

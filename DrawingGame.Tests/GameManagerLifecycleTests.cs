@@ -6,7 +6,7 @@ namespace DrawingGame.Tests;
 public class GameManagerLifecycleTests
 {
     [Fact]
-    public void StartAndChooseWord_SetAuthoritativePhaseDeadlines()
+    public void StartAndChooseWord_SetsAuthoritativePhaseDeadlines()
     {
         var game = CreateGame(2);
 
@@ -145,9 +145,9 @@ public class GameManagerLifecycleTests
         var game = CreateGame(2);
         var choosing = game.Manager.StartGame(game.OwnerConnectionId);
         var artistConnectionId = GetConnectionId(game, choosing.CurrentArtistId);
-        var guesserConnectionId = game.Players.Single(player =>
-            player.ConnectionId != artistConnectionId
-        ).ConnectionId;
+        var guesserConnectionId = game
+            .Players.Single(player => player.ConnectionId != artistConnectionId)
+            .ConnectionId;
         var word = game.Manager.GetWordChoices(artistConnectionId)[0];
         game.Manager.ChooseWord(artistConnectionId, word);
 
@@ -195,8 +195,8 @@ public class GameManagerLifecycleTests
         var game = CreateGame(3);
         var choosing = game.Manager.StartGame(game.OwnerConnectionId);
         var artistConnectionId = GetConnectionId(game, choosing.CurrentArtistId);
-        var guessers = game.Players
-            .Where(player => player.ConnectionId != artistConnectionId)
+        var guessers = game
+            .Players.Where(player => player.ConnectionId != artistConnectionId)
             .ToArray();
         var word = game.Manager.GetWordChoices(artistConnectionId)[0];
         game.Manager.ChooseWord(artistConnectionId, word);
@@ -224,9 +224,9 @@ public class GameManagerLifecycleTests
         var artistConnectionId = GetConnectionId(game, choosing.CurrentArtistId);
         var word = game.Manager.GetWordChoices(artistConnectionId)[0];
         game.Manager.ChooseWord(artistConnectionId, word);
-        var departingConnectionId = game.Players.Single(player =>
-            player.ConnectionId != artistConnectionId
-        ).ConnectionId;
+        var departingConnectionId = game
+            .Players.Single(player => player.ConnectionId != artistConnectionId)
+            .ConnectionId;
 
         var update = Assert.IsType<RoomUpdate>(
             game.Manager.RemoveDisconnectedPlayer(departingConnectionId)
@@ -285,9 +285,9 @@ public class GameManagerLifecycleTests
 
         var finishedGame = CreateGame(2);
         AdvanceToResults(finishedGame);
-        var nonOwnerConnectionId = finishedGame.Players.Single(player =>
-            player.ConnectionId != finishedGame.OwnerConnectionId
-        ).ConnectionId;
+        var nonOwnerConnectionId = finishedGame
+            .Players.Single(player => player.ConnectionId != finishedGame.OwnerConnectionId)
+            .ConnectionId;
         var ownerException = Assert.Throws<GameException>(() =>
             finishedGame.Manager.PlayAgain(nonOwnerConnectionId)
         );
@@ -303,19 +303,12 @@ public class GameManagerLifecycleTests
         var path = Path.Combine(AppContext.BaseDirectory, "test-word-list.txt");
         var manager = new GameManager(new WordList(path), clock);
         var owner = manager.CreateRoom("connection-1", "Player 1");
-        var players = new List<TestPlayer>
-        {
-            new("connection-1", owner.Session.PlayerId),
-        };
+        var players = new List<TestPlayer> { new("connection-1", owner.Session.PlayerId) };
 
         for (var index = 2; index <= playerCount; index++)
         {
             var connectionId = $"connection-{index}";
-            var entry = manager.JoinRoom(
-                connectionId,
-                $"Player {index}",
-                owner.Session.RoomId
-            );
+            var entry = manager.JoinRoom(connectionId, $"Player {index}", owner.Session.RoomId);
             players.Add(new TestPlayer(connectionId, entry.Session.PlayerId));
         }
 

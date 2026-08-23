@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using DrawingGame.Api.Game;
 using DrawingGame.Api.Game.Contracts;
 
 namespace DrawingGame.Api.Game;

@@ -1,30 +1,30 @@
 import WidthSelection from "./WidthSelection";
 
 const paintColours = [
-  "#111827",
+  "#000000",
+  "#7a7d82",
+  "#ee1a13",
+  "#ff7000",
+  "#ffe300",
+  "#00cb00",
+  "#00ff90",
+  "#00b1ff",
+  "#2824d2",
+  "#a200b9",
+  "#e8469a",
+  "#9f5331",
   "#ffffff",
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#06b6d4",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#a16207",
-  "#6b7280",
-  "#fca5a5",
-  "#fdba74",
-  "#bef264",
-  "#67e8f9",
-  "#93c5fd",
-  "#c4b5fd",
-  "#f9a8d4",
-  "#78350f",
-  "#94a3b8",
-  "#fecaca",
-  "#fed7aa",
-  "#d9f99d",
+  "#c0c0c0",
+  "#b51b16",
+  "#ff9b4f",
+  "#f5e782",
+  "#a5fca4",
+  "#a6ffd8",
+  "#9ee2ff",
+  "#3f3bff",
+  "#9705ff",
+  "#fc8bd9",
+  "#ffab8d",
 ];
 
 type PaintSelectionProps = {
@@ -50,11 +50,7 @@ export default function PaintSelection({
     <div className="flex h-full items-center justify-center">
       <div className="card w-fit bg-base-100 shadow-sm">
         <div className="card-body flex-row items-center gap-5 px-5 py-2">
-          <div
-            aria-label="Paint colours"
-            className="grid grid-cols-12 gap-2"
-            role="group"
-          >
+          <div aria-label="Paint colours" className="grid grid-cols-12 gap-2" role="group">
             {paintColours.map((colour, index) => {
               const isSelected = selectedColour === colour;
 
@@ -63,9 +59,7 @@ export default function PaintSelection({
                   aria-label={`Select colour ${index + 1}`}
                   aria-pressed={isSelected}
                   className={`btn btn-circle btn-sm border-base-300 p-0 ${
-                    isSelected
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100"
-                      : ""
+                    isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""
                   }`}
                   disabled={disabled}
                   key={colour}
@@ -78,11 +72,7 @@ export default function PaintSelection({
             })}
           </div>
 
-          <WidthSelection
-            disabled={disabled}
-            onChange={onBrushWidthChange}
-            value={brushWidth}
-          />
+          <WidthSelection disabled={disabled} onChange={onBrushWidthChange} value={brushWidth} />
 
           <div className="flex flex-col gap-2">
             <button

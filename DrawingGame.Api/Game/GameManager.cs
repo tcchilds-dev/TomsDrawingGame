@@ -16,30 +16,30 @@ public class GameManager
 
     private readonly string[] _allowedColours =
     [
-        "#111827",
+        "#000000",
+        "#7a7d82",
+        "#ee1a13",
+        "#ff7000",
+        "#ffe300",
+        "#00cb00",
+        "#00ff90",
+        "#00b1ff",
+        "#2824d2",
+        "#a200b9",
+        "#e8469a",
+        "#9f5331",
         "#ffffff",
-        "#ef4444",
-        "#f97316",
-        "#eab308",
-        "#22c55e",
-        "#06b6d4",
-        "#3b82f6",
-        "#8b5cf6",
-        "#ec4899",
-        "#a16207",
-        "#6b7280",
-        "#fca5a5",
-        "#fdba74",
-        "#bef264",
-        "#67e8f9",
-        "#93c5fd",
-        "#c4b5fd",
-        "#f9a8d4",
-        "#78350f",
-        "#94a3b8",
-        "#fecaca",
-        "#fed7aa",
-        "#d9f99d",
+        "#c0c0c0",
+        "#b51b16",
+        "#ff9b4f",
+        "#f5e782",
+        "#a5fca4",
+        "#a6ffd8",
+        "#9ee2ff",
+        "#3f3bff",
+        "#9705ff",
+        "#fc8bd9",
+        "#ffab8d",
     ];
 
     // <room.Id, room>
@@ -186,8 +186,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (room.OwnerId != player.Id)
             {
                 throw new GameException("Only the owner may start the game.");
@@ -224,8 +222,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (room.State.Phase != GamePhase.WordChoice)
             {
                 throw new GameException(
@@ -255,8 +251,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (room.State.Phase != GamePhase.WordChoice)
             {
                 throw new GameException("A word can only be chosen during the word choice phase.");
@@ -295,8 +289,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (room.State.Phase != GamePhase.Playing)
             {
                 throw new GameException("The word is only available while drawing.");
@@ -325,7 +317,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
             return CreateCanvasState(room);
         }
     }
@@ -356,8 +347,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (player.Id != GetCurrentArtistId(room) || room.State.Phase != GamePhase.Playing)
             {
                 return null;
@@ -399,8 +388,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (
                 player.Id != GetCurrentArtistId(room)
                 || room.State.Phase != GamePhase.Playing
@@ -421,8 +408,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (
                 player.Id != GetCurrentArtistId(room)
                 || room.State.Phase != GamePhase.Playing
@@ -444,8 +429,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (
                 player.Id != GetCurrentArtistId(room)
                 || room.State.Phase != GamePhase.Playing
@@ -466,8 +449,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (player.Id != GetCurrentArtistId(room) || room.State.Phase != GamePhase.Playing)
             {
                 return (null, null);
@@ -496,8 +477,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (player.Id == GetCurrentArtistId(room) && room.State.Phase == GamePhase.Playing)
             {
                 return null;
@@ -560,8 +539,6 @@ public class GameManager
 
         lock (room.Lock)
         {
-            EnsureRoomMembershipIsCurrent(connectionId, room, player);
-
             if (room.OwnerId != player.Id)
             {
                 throw new GameException("Only the owner may play again.");
@@ -569,9 +546,7 @@ public class GameManager
 
             if (room.State.Phase != GamePhase.Results)
             {
-                throw new GameException(
-                    "A rematch can only be requested from the results screen."
-                );
+                throw new GameException("A rematch can only be requested from the results screen.");
             }
 
             ResetToLobby(room);
@@ -654,10 +629,7 @@ public class GameManager
             {
                 if (wasCurrentArtist)
                 {
-                    canvasWasCleared = ContinueAfterArtistRemoval(
-                        room,
-                        _timeProvider.GetUtcNow()
-                    );
+                    canvasWasCleared = ContinueAfterArtistRemoval(room, _timeProvider.GetUtcNow());
                 }
                 else if (state.Phase == GamePhase.Playing && EveryoneHasGuessed(room))
                 {
@@ -763,8 +735,7 @@ public class GameManager
         if (state.CurrentArtistIndex >= state.ArtistQueue.Count)
         {
             state.CurrentArtistIndex = 0;
-            var nextRound =
-                (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
+            var nextRound = (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
 
             if (nextRound > room.Config.NumberOfRounds)
             {
@@ -786,8 +757,7 @@ public class GameManager
         if (state.CurrentArtistIndex >= state.ArtistQueue.Count)
         {
             state.CurrentArtistIndex = 0;
-            var nextRound =
-                (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
+            var nextRound = (state.CurrentRound ?? throw new InvalidOperationException()) + 1;
 
             if (nextRound > room.Config.NumberOfRounds)
             {
@@ -844,14 +814,14 @@ public class GameManager
         var artistId = GetCurrentArtistId(room);
 
         return room.Players.Count > 1
-            && room.Players.Keys
-                .Where(playerId => playerId != artistId)
+            && room.Players.Keys.Where(playerId => playerId != artistId)
                 .All(room.State.CorrectAnswerPlayerIds.Contains);
     }
 
     private static void AwardPoints(GameRoom room, string guesserId)
     {
-        var artistId = GetCurrentArtistId(room)
+        var artistId =
+            GetCurrentArtistId(room)
             ?? throw new InvalidOperationException("The artist is not set.");
         var guesserCount = room.Players.Count - 1;
 
@@ -901,23 +871,6 @@ public class GameManager
         }
 
         return (room, player);
-    }
-
-    private void EnsureRoomMembershipIsCurrent(string connectionId, GameRoom room, Player player)
-    {
-        if (
-            !_members.TryGetValue(connectionId, out var member)
-            || member.RoomId != room.Id
-            || member.PlayerId != player.Id
-            || !_rooms.TryGetValue(room.Id, out var currentRoom)
-            || !ReferenceEquals(currentRoom, room)
-            || !room.Players.TryGetValue(player.Id, out var currentPlayer)
-            || !ReferenceEquals(currentPlayer, player)
-            || player.ConnectionId != connectionId
-        )
-        {
-            throw new GameException("This connection is not in a room.");
-        }
     }
 
     private static bool IsValidPoint(Point point)

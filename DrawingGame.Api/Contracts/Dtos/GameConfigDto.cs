@@ -1,5 +1,3 @@
-using DrawingGame.Api.Game.Contracts;
-
 namespace DrawingGame.Api.Game.Contracts.Dtos;
 
 public sealed record GameConfigDto(

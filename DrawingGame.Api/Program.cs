@@ -7,9 +7,6 @@ builder.Services.AddSingleton<GameManager>();
 builder.Services.AddSingleton<DisconnectCleanup>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddHostedService<GameLoopService>();
-builder.Services.Configure<RoomConnectionOptions>(
-    builder.Configuration.GetSection("RoomConnection")
-);
 
 builder.Services.AddSingleton<WordList>(_ =>
 {

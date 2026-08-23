@@ -57,12 +57,9 @@ export default function Game({
   const isOwner = currentPlayerId === state.ownerId;
   const isArtist = currentPlayerId === state.currentArtistId;
   const isDrawingEnabled = isArtist && state.phase === "Playing";
-  const currentPlayer = state.players.find(
-    (player) => player.id === currentPlayerId,
-  );
+  const currentPlayer = state.players.find((player) => player.id === currentPlayerId);
   const isChatRestricted =
-    state.phase === "Playing" &&
-    (isArtist || currentPlayer?.hasCorrectlyGuessed === true);
+    state.phase === "Playing" && (isArtist || currentPlayer?.hasCorrectlyGuessed === true);
   const chatPlaceholder =
     state.phase !== "Playing"
       ? "Type a message"
@@ -71,9 +68,7 @@ export default function Game({
         : currentPlayer?.hasCorrectlyGuessed
           ? "You guessed the word"
           : "Type a guess";
-  const artistName = state.players.find(
-    (player) => player.id === state.currentArtistId,
-  )?.username;
+  const artistName = state.players.find((player) => player.id === state.currentArtistId)?.username;
 
   const submitMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -95,7 +90,7 @@ export default function Game({
   };
 
   return (
-    <main className="grid h-screen grid-cols-6 grid-rows-25 gap-2 p-2">
+    <main className="grid h-screen grid-cols-6 grid-rows-25 gap-2 p-2 bg-base-200">
       <aside className="col-start-1 row-start-1 text-center">
         {state.phase === "Results"
           ? "Results"
@@ -115,24 +110,15 @@ export default function Game({
             {error}
           </p>
         ) : (
-          state.phase === "Lobby" &&
-          !isOwner && <p>Waiting for the owner to start</p>
+          state.phase === "Lobby" && !isOwner && <p>Waiting for the owner to start</p>
         )}
       </aside>
       <aside className="col-start-1 row-start-22 row-span-4 flex flex-col gap-1 text-center">
-        <RoomCodeButton roomCode={state.roomId} />
         {state.phase === "Lobby" && isOwner && (
-          <Button
-            disabled={isSubmitting}
-            onClick={() => void onStartGame()}
-            type="Start"
-          />
+          <Button disabled={isSubmitting} onClick={() => void onStartGame()} type="Start" />
         )}
-        <Button
-          disabled={isSubmitting}
-          onClick={() => void onLeaveRoom()}
-          type="Leave"
-        />
+        <RoomCodeButton roomCode={state.roomId} />
+        <Button disabled={isSubmitting} onClick={() => void onLeaveRoom()} type="Leave" />
       </aside>
 
       <header className="col-start-2 col-span-4 row-start-1 content-center text-center">
@@ -187,10 +173,7 @@ export default function Game({
         <Timer phaseEndsAt={state.phaseEndsAt} />
       </aside>
       <aside className="col-start-6 row-start-2 row-span-20 min-h-0">
-        <Chat
-          currentPlayerId={currentPlayerId}
-          messages={state.chatHistory}
-        />
+        <Chat currentPlayerId={currentPlayerId} messages={state.chatHistory} />
       </aside>
       <aside className="col-start-6 row-start-22 row-span-2 flex items-start">
         <form className="w-full" onSubmit={(event) => void submitMessage(event)}>

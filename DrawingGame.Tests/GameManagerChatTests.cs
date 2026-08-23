@@ -25,7 +25,7 @@ public class GameManagerChatTests
     [Fact]
     public void ProcessMessage_RecordsAndConcealsCorrectGuess()
     {
-        var game = StartPlayingGame();
+        var game = StartTestGame();
 
         var update = Assert.IsType<MessageUpdate>(
             game.Manager.ProcessMessage(
@@ -44,9 +44,9 @@ public class GameManagerChatTests
             game.Guesser.Session
         );
         Assert.True(
-            refreshedEntry.State.Players.Single(player =>
-                player.Id == game.Guesser.Session.PlayerId
-            ).HasCorrectlyGuessed
+            refreshedEntry
+                .State.Players.Single(player => player.Id == game.Guesser.Session.PlayerId)
+                .HasCorrectlyGuessed
         );
 
         var repeatedGuess = game.Manager.ProcessMessage(game.GuesserConnectionId, game.Word);
@@ -56,7 +56,7 @@ public class GameManagerChatTests
     [Fact]
     public void ProcessMessage_RejectsArtistDuringPlayingPhase()
     {
-        var game = StartPlayingGame();
+        var game = StartTestGame();
 
         var result = game.Manager.ProcessMessage(game.ArtistConnectionId, "A helpful hint");
 
@@ -76,20 +76,12 @@ public class GameManagerChatTests
         Assert.Equal("Maximum allowed message size is 200 characters.", exception.Message);
     }
 
-    private static PlayingGame StartPlayingGame()
+    private static TestGame StartTestGame()
     {
         var manager = CreateManager();
         var owner = manager.CreateRoom("owner-connection", "Alice");
-        var guesser = manager.JoinRoom(
-            "guesser-connection",
-            "Bob",
-            owner.Session.RoomId
-        );
-        var thirdPlayer = manager.JoinRoom(
-            "third-connection",
-            "Carol",
-            owner.Session.RoomId
-        );
+        var guesser = manager.JoinRoom("guesser-connection", "Bob", owner.Session.RoomId);
+        var thirdPlayer = manager.JoinRoom("third-connection", "Carol", owner.Session.RoomId);
 
         var state = manager.StartGame("owner-connection");
         var players = new[]
@@ -109,7 +101,7 @@ public class GameManagerChatTests
         var word = manager.GetWordChoices(artistConnectionId)[0];
         manager.ChooseWord(artistConnectionId, word);
 
-        return new PlayingGame(
+        return new TestGame(
             manager,
             guessingPlayer.Entry,
             artistConnectionId,
@@ -124,7 +116,7 @@ public class GameManagerChatTests
         return new GameManager(new WordList(path), TimeProvider.System);
     }
 
-    private sealed record PlayingGame(
+    private sealed record TestGame(
         GameManager Manager,
         RoomEntryDto Guesser,
         string ArtistConnectionId,

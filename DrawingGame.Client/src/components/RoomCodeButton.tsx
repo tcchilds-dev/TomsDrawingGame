@@ -34,13 +34,13 @@ export default function RoomCodeButton({ roomCode }: { roomCode: string }) {
   return (
     <button
       aria-label={`${isCopied ? "Copied" : "Copy"} room code ${roomCode}`}
-      className={`btn w-full text-white transition-colors ${
+      className={`btn w-full ${isCopied ? "text-primary-content" : "text-white"} transition-colors ${
         isCopied ? "btn-primary" : "btn-neutral"
       }`}
       onClick={() => void copyRoomCode()}
       type="button"
     >
-      Room Code: {roomCode}
+      {isCopied ? `Copied!` : `Room Code: ${roomCode}`}
     </button>
   );
 }
