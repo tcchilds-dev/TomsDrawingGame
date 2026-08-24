@@ -63,4 +63,25 @@ describe("Home", () => {
     expect(screen.getByRole("button", { name: "Create Room" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Join Room" })).toBeDisabled();
   });
+
+  it("keeps the form controls fixed when a long error appears", () => {
+    render(
+      <Home
+        error="This unusually long room error must wrap without resizing any controls."
+        isSubmitting={false}
+        onCreateRoom={vi.fn()}
+        onJoinRoom={vi.fn()}
+      />,
+    );
+
+    const roomEntry = screen.getByLabelText("Room entry");
+    expect(roomEntry).toHaveClass("w-80", "shrink-0");
+    expect(screen.getByRole("alert")).toHaveClass("max-w-full", "break-words");
+    screen.getAllByRole("textbox").forEach((input) => {
+      expect(input).toHaveClass("w-full");
+    });
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).toHaveClass("w-full");
+    });
+  });
 });

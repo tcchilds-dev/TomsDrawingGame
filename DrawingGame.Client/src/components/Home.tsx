@@ -22,7 +22,7 @@ export default function Home({
     <main className="flex h-screen items-center justify-center bg-base-200 p-2">
       <section
         aria-label="Room entry"
-        className="flex w-fit flex-col gap-2 text-center"
+        className="flex w-80 shrink-0 flex-col gap-2 text-center"
       >
         <Input
           disabled={isSubmitting}
@@ -50,7 +50,7 @@ export default function Home({
           />
         </div>
         {error && (
-          <p className="text-center text-error" role="alert">
+          <p className="max-w-full break-words text-center text-error" role="alert">
             {error}
           </p>
         )}

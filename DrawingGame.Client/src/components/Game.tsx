@@ -10,12 +10,7 @@ import Results from "./Results";
 import RoomCodeButton from "./RoomCodeButton";
 import Timer from "./Timer";
 import Word from "./Word";
-import type {
-  CanvasState,
-  GameConfigUpdate,
-  GameState,
-  Point,
-} from "../game/types";
+import type { CanvasState, GameConfigUpdate, GameState, Point } from "../game/types";
 
 type GameProps = {
   artistWord: string | null;
@@ -61,7 +56,7 @@ export default function Game({
   wordChoices,
 }: GameProps) {
   const [selectedColour, setSelectedColour] = useState("#111827");
-  const [brushWidth, setBrushWidth] = useState(8);
+  const [brushWidth, setBrushWidth] = useState(6);
   const [draftMessage, setDraftMessage] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const isOwner = currentPlayerId === state.ownerId;
