@@ -1,30 +1,33 @@
 import WidthSelection from "./WidthSelection";
 
 const paintColours = [
-  "#111827",
-  "#7a7d82",
-  "#ee1a13",
-  "#ff7000",
-  "#ffe300",
-  "#00cb00",
-  "#00ff90",
-  "#00b1ff",
-  "#2824d2",
-  "#a200b9",
-  "#e8469a",
-  "#9f5331",
   "#ffffff",
-  "#c0c0c0",
-  "#b51b16",
-  "#ff9b4f",
-  "#f5e782",
-  "#a5fca4",
-  "#a6ffd8",
+  "#C1C1C1",
+  "#ef130b",
+  "#ff7100",
+  "#ffd500",
+  "#6bd121",
+  "#00ff91",
   "#9ee2ff",
   "#3f3bff",
   "#9705ff",
+
   "#fc8bd9",
   "#ffab8d",
+
+  "#111827",
+  "#505050",
+  "#cf0e29",
+  "#c23800",
+  "#ffae00",
+  "#62b522",
+  "#00785d",
+  "#00b2ff",
+  "#0f276e",
+  "#810fa3",
+
+  "#e30b70",
+  "#9f5331",
 ];
 
 type PaintSelectionProps = {
