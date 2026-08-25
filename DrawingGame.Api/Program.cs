@@ -10,18 +10,18 @@ builder.Services.AddHostedService<GameLoopService>();
 
 builder.Services.AddSingleton<WordList>(_ =>
 {
-    var path = Path.Combine(builder.Environment.ContentRootPath, "word-list.txt");
+    var path = Path.Combine(AppContext.BaseDirectory, "word-list.txt");
 
     return new WordList(path);
 });
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
+app.MapGet("/healthz", () => Results.Ok());
 app.MapHub<GameHub>("/game");
+app.MapFallbackToFile("index.html");
 
 app.Run();
