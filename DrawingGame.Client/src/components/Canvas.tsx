@@ -22,6 +22,14 @@ const EMPTY_CANVAS_SIZE: CanvasSize = { height: 1, width: 1 };
 const MAX_POINT_GAP_PX = 8;
 const MAX_POINTS_PER_BATCH = 150;
 const STROKE_STREAMLINE = 0.45;
+const CURSOR_SIZE = 32;
+const CURSOR_CENTRE = CURSOR_SIZE / 2;
+
+function getBrushCursor(colour: string, brushWidth: number) {
+  const cursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${CURSOR_SIZE}" height="${CURSOR_SIZE}" viewBox="0 0 ${CURSOR_SIZE} ${CURSOR_SIZE}"><circle cx="${CURSOR_CENTRE}" cy="${CURSOR_CENTRE}" r="${brushWidth / 2}" fill="${colour}" stroke="#64748b" stroke-width="0.75"/></svg>`;
+
+  return `url("data:image/svg+xml,${encodeURIComponent(cursorSvg)}") ${CURSOR_CENTRE} ${CURSOR_CENTRE}, default`;
+}
 
 function drawStroke(
   context: CanvasRenderingContext2D,
@@ -121,6 +129,7 @@ export default function Canvas({
   const networkFlushFrameRef = useRef<number | null>(null);
   const pendingNetworkPointsRef = useRef<Point[]>([]);
   const redrawFrameRef = useRef<number | null>(null);
+  const cursor = isDrawingEnabled ? getBrushCursor(colour, brushWidth) : undefined;
 
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -423,7 +432,7 @@ export default function Canvas({
       aria-disabled={!isDrawingEnabled}
       aria-label="Drawing canvas"
       className={`h-full w-full touch-none rounded-box bg-white shadow-sm ${
-        isDrawingEnabled ? "cursor-crosshair" : "cursor-default"
+        isDrawingEnabled ? "" : "cursor-default"
       }`}
       onLostPointerCapture={(event) => finishStroke(event, false)}
       onPointerCancel={(event) => finishStroke(event, false)}
@@ -431,6 +440,7 @@ export default function Canvas({
       onPointerMove={handlePointerMove}
       onPointerUp={(event) => finishStroke(event, true)}
       ref={canvasRef}
+      style={{ cursor }}
     >
       Your browser does not support the drawing canvas.
     </canvas>

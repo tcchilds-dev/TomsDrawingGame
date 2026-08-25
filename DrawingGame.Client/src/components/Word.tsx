@@ -55,11 +55,18 @@ export default function Word({
       return <h1>Loading word...</h1>;
     }
 
+    const letterCount = countLetters(word);
+    const letterDescription = `${letterCount}`;
+
     return (
       <h1
-        aria-label={`${isArtist ? "Current word" : "Masked word"}: ${word}`}
+        aria-label={`${isArtist ? "Current word" : "Masked word"}: ${word}, ${letterDescription}`}
+        className="flex items-center justify-center gap-3"
       >
-        {spaceCharacters(word)}
+        <span>{spaceCharacters(word)}</span>
+        <span aria-hidden="true" className="text-sm text-black">
+          ({letterDescription})
+        </span>
       </h1>
     );
   }
@@ -69,4 +76,8 @@ export default function Word({
 
 function spaceCharacters(word: string) {
   return Array.from(word).join(" ");
+}
+
+function countLetters(word: string) {
+  return Array.from(word).filter((character) => /[\p{L}_]/u.test(character)).length;
 }

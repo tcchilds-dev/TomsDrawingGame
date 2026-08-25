@@ -75,9 +75,9 @@ describe("Word", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Current word: Castle")).toHaveTextContent(
-      "C a s t l e",
-    );
+    expect(
+      screen.getByLabelText("Current word: Castle, 6 letters"),
+    ).toHaveTextContent("C a s t l e(6 letters)");
     expect(screen.queryByText("______")).not.toBeInTheDocument();
 
     rerender(
@@ -93,9 +93,28 @@ describe("Word", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Masked word: ______")).toHaveTextContent(
-      "_ _ _ _ _ _",
-    );
+    expect(
+      screen.getByLabelText("Masked word: ______, 6 letters"),
+    ).toHaveTextContent("_ _ _ _ _ _(6 letters)");
     expect(screen.queryByText("Castle")).not.toBeInTheDocument();
+  });
+
+  it("counts letters without including spaces in multi-word prompts", () => {
+    render(
+      <Word
+        artistName="Alice"
+        artistWord={null}
+        choices={[]}
+        displayWord="_____ _____"
+        isArtist={false}
+        isSubmitting={false}
+        onChooseWord={vi.fn()}
+        phase="Playing"
+      />,
+    );
+
+    expect(
+      screen.getByLabelText("Masked word: _____ _____, 10 letters"),
+    ).toHaveTextContent("(10 letters)");
   });
 });

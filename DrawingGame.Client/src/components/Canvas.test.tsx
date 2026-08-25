@@ -368,6 +368,45 @@ describe("Canvas", () => {
     expect(canvas).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("uses the selected brush colour and width for the drawing cursor", () => {
+    const { rerender } = render(
+      <Canvas
+        brushWidth={4}
+        canvasState={emptyCanvasState}
+        colour="#ffffff"
+        isDrawingEnabled
+        onAddStrokePoints={vi.fn()}
+        onBeginStroke={vi.fn()}
+        onEndStroke={vi.fn()}
+      />,
+    );
+
+    const canvas = screen.getByLabelText("Drawing canvas");
+    const smallWhiteCursor = canvas.style.cursor;
+
+    expect(smallWhiteCursor).toContain("data:image/svg+xml");
+    expect(smallWhiteCursor).toContain("%23ffffff");
+    expect(smallWhiteCursor).toContain("r%3D%222%22");
+    expect(smallWhiteCursor).toContain("stroke-width%3D%220.75%22");
+    expect(canvas).not.toHaveClass("cursor-crosshair");
+
+    rerender(
+      <Canvas
+        brushWidth={8}
+        canvasState={emptyCanvasState}
+        colour="#111827"
+        isDrawingEnabled
+        onAddStrokePoints={vi.fn()}
+        onBeginStroke={vi.fn()}
+        onEndStroke={vi.fn()}
+      />,
+    );
+
+    expect(canvas.style.cursor).toContain("%23111827");
+    expect(canvas.style.cursor).toContain("r%3D%224%22");
+    expect(canvas.style.cursor).not.toBe(smallWhiteCursor);
+  });
+
   it("uses subtle elevation without changing the canvas material", () => {
     render(
       <Canvas

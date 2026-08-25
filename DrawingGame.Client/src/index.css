@@ -2,3 +2,18 @@
 @plugin "daisyui" {
   themes: cupcake --default;
 }
+
+@layer base {
+  html {
+    /*
+     * The game layout is viewport-relative, while its controls use rem units.
+     * Scaling the root keeps those controls in proportion with the six-column
+     * layout on laptop-sized displays without changing the desktop design.
+     */
+    font-size: clamp(
+      10px,
+      min(calc(100vw / 120), calc(100vh / 57.5)),
+      16px
+    );
+  }
+}
