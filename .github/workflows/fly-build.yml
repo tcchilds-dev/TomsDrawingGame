@@ -1,0 +1,78 @@
+name: Fly build check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fly-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and smoke-test production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Check the Fly build contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import tomllib
+
+          config = tomllib.loads(Path("fly.toml").read_text())
+
+          if config.get("build", {}).get("dockerfile") != "Dockerfile":
+              raise SystemExit("fly.toml must build the root Dockerfile")
+
+          service = config.get("http_service", {})
+          if service.get("internal_port") != 8080:
+              raise SystemExit("fly.toml must expose the application on port 8080")
+
+          health_paths = {
+              check.get("path") for check in service.get("checks", [])
+          }
+          if "/healthz" not in health_paths:
+              raise SystemExit("fly.toml must include the /healthz HTTP check")
+          PY
+
+      - name: Build the image used by Fly
+        run: docker build --tag drawing-game:ci .
+
+      - name: Start the production image
+        run: >-
+          docker run --detach
+          --name drawing-game-ci
+          --publish 127.0.0.1:8080:8080
+          drawing-game:ci
+
+      - name: Smoke-test the running application
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/healthz > /dev/null; then
+              curl --fail --silent --show-error http://127.0.0.1:8080/ > /dev/null
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          echo "The application did not become healthy within 30 seconds."
+          docker logs drawing-game-ci
+          exit 1
+
+      - name: Stop the production image
+        if: always()
+        run: docker rm --force drawing-game-ci || true
