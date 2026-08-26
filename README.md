@@ -7,7 +7,7 @@ The goal for this project was not to build the most feature-rich drawing game po
 
 As always, this README was written entirely by myself.
 
-![screenshot of gameplay](./Screenshots/Broccoli.png)
+![screenshot of gameplay](./Screenshots/Volcano.png)
 
 ## The Process: Backend Is The Focus
 
